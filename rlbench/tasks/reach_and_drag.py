@@ -16,6 +16,7 @@ class ReachAndDrag(Task):
         self.distractor1 = Shape('distractor1')
         self.distractor2 = Shape('distractor2')
         self.distractor3 = Shape('distractor3')
+        self._movable_objects = [self.stick, self.cube]
 
     def init_episode(self, index: int) -> List[str]:
         self.register_success_conditions([

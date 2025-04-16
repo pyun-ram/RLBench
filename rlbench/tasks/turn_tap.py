@@ -16,6 +16,10 @@ class TurnTap(Task):
         self.right_end = Dummy('waypoint6')
         self.left_joint = Joint('left_joint')
         self.right_joint = Joint('right_joint')
+        self._movable_objects = [
+            self.get_base().get_object('tap_left_visual'),
+            self.get_base().get_object('tap_right_visual'),
+        ]
 
     def init_episode(self, index: int) -> List[str]:
         option = OPTIONS[index]

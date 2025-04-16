@@ -20,6 +20,7 @@ class PutItemInDrawer(Task):
         self._waypoint1 = Dummy('waypoint2')
         self._item = Shape('item')
         self.register_graspable_objects([self._item])
+        self._movable_objects = self._joints + [self._item]
 
     def init_episode(self, index) -> List[str]:
         option = self._options[index]

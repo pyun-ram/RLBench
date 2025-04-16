@@ -18,6 +18,7 @@ class CloseJar(Task):
         self.register_graspable_objects([self.lid])
         self.boundary = Shape('spawn_boundary')
         self.conditions = [NothingGrasped(self.robot.gripper)]
+        self._movable_objects = [self.lid] + self.jars
 
     def init_episode(self, index: int) -> List[str]:
         b = SpawnBoundary([self.boundary])

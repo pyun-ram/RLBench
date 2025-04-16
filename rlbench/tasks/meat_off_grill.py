@@ -17,6 +17,7 @@ class MeatOffGrill(Task):
         self.register_graspable_objects([self._chicken, self._steak])
         self._w1 = Dummy('waypoint1')
         self._w1z= self._w1.get_position()[2]
+        self._movable_objects = [self._steak, self._chicken]
 
     def init_episode(self, index: int) -> List[str]:
         conditions = [NothingGrasped(self.robot.gripper)]

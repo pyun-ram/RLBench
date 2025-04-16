@@ -32,6 +32,7 @@ class StackBlocks(Task):
         self.register_waypoint_ability_start(3, self._move_above_drop_zone)
         self.register_waypoint_ability_start(5, self._is_last)
         self.register_waypoints_should_repeat(self._repeat)
+        self._movable_objects = self.target_blocks + self.distractors
 
     def init_episode(self, index: int) -> List[str]:
         # For each color, we want to have 2, 3 or 4 blocks stacked

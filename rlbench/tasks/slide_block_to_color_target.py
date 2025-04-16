@@ -32,6 +32,7 @@ class SlideBlockToColorTarget(Task):
                 Dummy('point4d'),
                 Dummy('point4e')]
         }
+        self._movable_objects = [self.block]
 
     def init_episode(self, index: int) -> List[str]:
         self._variation_index = index

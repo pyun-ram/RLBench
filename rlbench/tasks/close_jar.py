@@ -38,8 +38,9 @@ class CloseJar(Task):
         _, distractor_color_rgb = colors[color_choice]
         self.jars[index % 2].set_color(target_color_rgb)
         other_index = {0: 1, 1: 0}
-        self.jars[other_index[index % 2]].set_color(distractor_color_rgb)
-        self.conditions += [DetectedCondition(self.lid, success)]
+        self.register_success_conditions([DetectedCondition(self.lid, success)])
+        #self.conditions += [DetectedCondition(self.lid, success)]
+        #self.register_success_conditions(self.conditions)
         self.register_success_conditions(self.conditions)
         return ['close the %s jar' % target_color_name,
                 'screw on the %s jar lid' % target_color_name,

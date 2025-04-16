@@ -15,6 +15,11 @@ from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
 
 
+POSE_FOLDER = "pose"
+def read_pkl(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
 class InvalidTaskName(Exception):
     pass
 
@@ -113,6 +118,7 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
         front_rgb_f = join(example_path, FRONT_RGB_FOLDER)
         front_depth_f = join(example_path, FRONT_DEPTH_FOLDER)
         front_mask_f = join(example_path, FRONT_MASK_FOLDER)
+        pose_f = join(example_path, POSE_FOLDER)
 
         num_steps = len(obs)
 
@@ -334,6 +340,7 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                         _resize_if_needed(Image.open(
                             obs[i].front_mask),
                             obs_config.front_camera.image_size)))
+                obs.poses = read_pkl(join(pose_f, f"%d.pkl" %i))
 
         demos.append(obs)
     return demos

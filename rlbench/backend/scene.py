@@ -309,6 +309,7 @@ class Scene(object):
                 if self._obs_config.record_ignore_collisions else None),
             misc=self._get_misc())
         obs = self.task.decorate_observation(obs)
+        obs.poses = self.get_poses()
         return obs
 
     def step(self):
@@ -460,6 +461,24 @@ class Scene(object):
             demo_list.append(self.get_observation())
         if func is not None:
             func(self.get_observation())
+    
+    def get_poses(self):
+        poses_dict = {}
+        object_names = [f"Panda_link{i}_visual" for i in range(8)]
+        object_names += [
+            "Panda_gripper_visual",
+            "Panda_leftfinger_visual",
+            "Panda_rightfinger_visual",
+        ]
+        for name in object_names:
+            pose = self.robot.arm.get_object(name).get_pose()
+            bbox = self.robot.arm.get_object(name).get_bounding_box()
+            poses_dict[name] = (pose, bbox)
+        for itm in self.task._movable_objects:
+            pose = itm.get_pose()
+            name = itm.get_name()
+            poses_dict[f"graspable_obj_{name}"] = (pose, bbox)
+        return poses_dict
 
     def _set_camera_properties(self) -> None:
         def _set_rgb_props(rgb_cam: VisionSensor,

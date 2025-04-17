@@ -473,11 +473,14 @@ class Scene(object):
         for name in object_names:
             pose = self.robot.arm.get_object(name).get_pose()
             bbox = self.robot.arm.get_object(name).get_bounding_box()
-            poses_dict[name] = (pose, bbox)
+            matrix = self.robot.arm.get_object(name).get_matrix()
+            poses_dict[name] = (pose, bbox, matrix)
         for itm in self.task._movable_objects:
             pose = itm.get_pose()
             name = itm.get_name()
-            poses_dict[f"graspable_obj_{name}"] = (pose, bbox)
+            bbox = itm.get_bounding_box()
+            matrix = itm.get_matrix()
+            poses_dict[f"graspable_obj_{name}"] = (pose, bbox, matrix)
         return poses_dict
 
     def _set_camera_properties(self) -> None:

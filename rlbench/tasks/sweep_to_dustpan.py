@@ -16,7 +16,6 @@ class SweepToDustpan(Task):
         conditions = [DetectedCondition(dirt, success_sensor) for dirt in dirts]
         self.register_graspable_objects([broom])
         self.register_success_conditions(conditions)
-        self._movable_objects = [broom] + dirts
 
     def init_episode(self, index: int) -> List[str]:
         return ['sweep dirt to dustpan',

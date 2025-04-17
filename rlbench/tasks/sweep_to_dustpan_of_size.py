@@ -26,6 +26,8 @@ class SweepToDustpanOfSize(Task):
                 Dummy('point2b'),
                 Dummy('point2c')]
         }
+        dirts = [Shape('dirt' + str(i)) for i in range(DIRT_NUM)]
+        self._movable_objects = [broom] + dirts
 
     def init_episode(self, index: int) -> List[str]:
         self._variation_index = index

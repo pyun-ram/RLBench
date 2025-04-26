@@ -15,6 +15,7 @@ from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
 
 
+rgb_handles_to_mask = lambda x: x
 POSE_FOLDER = "pose"
 def read_pkl(path):
     with open(path, 'rb') as f:

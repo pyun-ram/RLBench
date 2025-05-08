@@ -24,6 +24,10 @@ class PutItemInDrawer(Task):
             self.get_base().get_object(f'drawer_{itm}')
             for itm in self._options
         ] + [self._item]
+        self._additional_objects = [
+            self.get_base().get_object(f'drawer_frame'),
+            self.get_base().get_object(f'drawer_legs'),
+        ]
 
     def init_episode(self, index) -> List[str]:
         option = self._options[index]

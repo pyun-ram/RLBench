@@ -481,6 +481,13 @@ class Scene(object):
             bbox = itm.get_bounding_box()
             matrix = itm.get_matrix()
             poses_dict[f"graspable_obj_{name}"] = (pose, bbox, matrix)
+        if self.task.name in ["open_drawer", "put_item_in_drawer"]:
+            for itm in self.task._additional_objects:
+                pose = itm.get_pose()
+                name = itm.get_name()
+                bbox = itm.get_bounding_box()
+                matrix = itm.get_matrix()
+                poses_dict[f"{name}"] = (pose, bbox, matrix)
         return poses_dict
 
     def _set_camera_properties(self) -> None:

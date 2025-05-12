@@ -20,7 +20,7 @@ from rlbench.noise_model import NoiseModel
 from rlbench.observation_config import ObservationConfig, CameraConfig
 
 STEPS_BEFORE_EPISODE_START = 10
-
+rgb_handles_to_mask = lambda x: x
 
 class Scene(object):
     """Controls what is currently in the vrep scene. This is used for making

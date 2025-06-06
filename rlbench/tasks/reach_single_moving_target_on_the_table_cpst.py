@@ -4,6 +4,7 @@ from pyrep.objects import ProximitySensor, Shape, Dummy
 from rlbench.backend.conditions import DetectedCondition
 import numpy as np
 from tqdm import tqdm
+from pathlib import Path
 
 def get_state_config(var_index: int):
     if var_index == 0:
@@ -40,36 +41,42 @@ def init_target_state(
     x_range = area if x0 is None else [x0[0], x0[1], x0[2], x0[0], x0[1], x0[2]]
     v_range = [-0.05, -0.05, 0, 0.05, 0.05, 0] if v0 is None else [v0[0], v0[1], v0[2], v0[0], v0[1], v0[2]]
     a_range = [-0.002, -0.002, 0, 0.002, 0.002, 0] if a0 is None else [a0[0], a0[1], a0[2], a0[0], a0[1], a0[2]]
+    cache_name = "_".join([f'{itm}' for itm in x_range+v_range+a_range+dx+dv+da])
+    cache_name = f"/tmp/{cache_name}.npy"
+    if not Path(cache_name).exists():
+        xs = np.arange(x_range[0], x_range[3] + dx[0]/2, dx[0])
+        ys = np.arange(x_range[1], x_range[4] + dx[1]/2, dx[1])
+        zs = np.arange(x_range[2], x_range[5] + dx[2]/2, dx[2])
+        vxs = np.arange(v_range[0], v_range[3] + dv[0]/2, dv[0])
+        vys = np.arange(v_range[1], v_range[4] + dv[1]/2, dv[1])
+        vzs = np.arange(v_range[2], v_range[5] + dv[2]/2, dv[2])
+        axs = np.arange(a_range[0], a_range[3] + da[0]/2, da[0])
+        ays = np.arange(a_range[1], a_range[4] + da[1]/2, da[1])
+        azs = np.arange(a_range[2], a_range[5] + da[2]/2, da[2])
 
-    xs = np.arange(x_range[0], x_range[3] + dx[0]/2, dx[0])
-    ys = np.arange(x_range[1], x_range[4] + dx[1]/2, dx[1])
-    zs = np.arange(x_range[2], x_range[5] + dx[2]/2, dx[2])
-    vxs = np.arange(v_range[0], v_range[3] + dv[0]/2, dv[0])
-    vys = np.arange(v_range[1], v_range[4] + dv[1]/2, dv[1])
-    vzs = np.arange(v_range[2], v_range[5] + dv[2]/2, dv[2])
-    axs = np.arange(a_range[0], a_range[3] + da[0]/2, da[0])
-    ays = np.arange(a_range[1], a_range[4] + da[1]/2, da[1])
-    azs = np.arange(a_range[2], a_range[5] + da[2]/2, da[2])
+        grid = np.array(np.meshgrid(xs, ys, zs, vxs, vys, vzs, axs, ays, azs, indexing='ij'))
+        points = grid.reshape(9, -1).T
+        t_samples = np.arange(0, t_max + dt/2, dt)
 
-    grid = np.array(np.meshgrid(xs, ys, zs, vxs, vys, vzs, axs, ays, azs, indexing='ij'))
-    points = grid.reshape(9, -1).T
-    t_samples = np.arange(0, t_max + dt/2, dt)
+        valid_mask = np.ones(points.shape[0], dtype=bool)
+        for t in tqdm(t_samples):
+            pos = points[:, 0:3] + points[:, 3:6] * t + 0.5 * points[:, 6:9] * t**2
+            in_box = (
+                (area[0] <= pos[:, 0]) & (pos[:, 0] <= area[3]) &
+                (area[1] <= pos[:, 1]) & (pos[:, 1] <= area[4]) &
+                (area[2] <= pos[:, 2]) & (pos[:, 2] <= area[5])
+            )
+            valid_velocity = np.linalg.norm(points[:, 3:6], axis=-1) >= 0.03
+            valid_mask &= in_box
+            valid_mask &= valid_velocity
+            if not valid_mask.any():
+                break
 
-    valid_mask = np.ones(points.shape[0], dtype=bool)
-    for t in tqdm(t_samples):
-        pos = points[:, 0:3] + points[:, 3:6] * t + 0.5 * points[:, 6:9] * t**2
-        in_box = (
-            (area[0] <= pos[:, 0]) & (pos[:, 0] <= area[3]) &
-            (area[1] <= pos[:, 1]) & (pos[:, 1] <= area[4]) &
-            (area[2] <= pos[:, 2]) & (pos[:, 2] <= area[5])
-        )
-        valid_velocity = np.linalg.norm(points[:, 3:6], axis=-1) >= 0.03
-        valid_mask &= in_box
-        valid_mask &= valid_velocity
-        if not valid_mask.any():
-            break
-
-    valid_points = points[valid_mask]
+        valid_points = points[valid_mask]
+        Path(cache_name).parent.mkdir(parents=True, exist_ok=True)
+        np.save(cache_name, valid_points)
+    else:
+        valid_points = np.load(cache_name)
     # sample one
     idx = np.random.choice(valid_points.shape[0])
     target_state = valid_points[idx]
@@ -116,6 +123,7 @@ def compute_delay(cur_position, tar_position):
 class ReachSingleMovingTargetOnTheTableCpst(Task):
 
     def init_task(self) -> None:
+        np.random.seed(123)
         self.success_sensor = ProximitySensor('success')
         self.waypoint0 = Dummy('waypoint0')
         self.target = Shape('target')

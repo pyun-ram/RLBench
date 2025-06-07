@@ -71,7 +71,7 @@ class Runner:
     ):
         for episode_dir in sorted(Path(root_dir).iterdir()):
             print(episode_dir)
-            save_path = Path(save_dir) / f"{Pathroot_dir.name}_{episode_dir.name}.gif"
+            save_path = Path(save_dir) / f"{Path(root_dir).name}_{episode_dir.name}.gif"
             save_path.parent.mkdir(parents=True, exist_ok=True)
             self.visualize_one_episode(episode_dir, save_path)
         return

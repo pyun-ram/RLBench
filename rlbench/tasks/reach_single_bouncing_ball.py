@@ -125,7 +125,7 @@ def compute_delay(cur_position, tar_position):
     Return:
         float, delay
     '''
-    avr_speed = 0.1 # (m/s)
+    avr_speed = 0.3 # (m/s)
     return np.linalg.norm(cur_position - tar_position) / avr_speed
     
 
@@ -222,16 +222,19 @@ class ReachSingleBouncingBall(Task):
             tip_tar_position,
         )
         target_state_dict = self.target_state_list[-1]
+        v = np.array(target_state_dict["v"]) + \
+            np.array(target_state_dict["a"]) * \
+            (self.t - target_state_dict['t0'])
         new_wp_position = compute_target_position(
             t = self.t+t_delay,
             t0=self.t,
             x0=tip_tar_position,
-            v0=target_state_dict["v"],
+            v0=v,
             a0=target_state_dict["a"],
             dt = simulation_timestep,
         )
         way_obj = waypoint.get_waypoint_object()
-        # way_obj.set_position(new_wp_position)
+        way_obj.set_position(new_wp_position)
         return
 
     def _repeat(self):

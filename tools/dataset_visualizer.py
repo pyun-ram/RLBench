@@ -1,7 +1,6 @@
 import fire
 from pathlib import Path
 import numpy as np
-import imageio
 import pickle
 from PIL import Image, ImageDraw, ImageFont
 
@@ -11,7 +10,7 @@ def read_pkl(pkl_path):
     return data
 
 def read_image(image_path):
-    img = Image.open(image_path).convert('RGB')
+    img = Image.open(image_path)
     return np.array(img)
 
 def save_gif(image_list, save_path, duration=0.1):
@@ -71,7 +70,7 @@ class Runner:
     ):
         for episode_dir in sorted(Path(root_dir).iterdir()):
             print(episode_dir)
-            save_path = Path(save_dir) / f"{Path(root_dir).name}_{episode_dir.name}.gif"
+            save_path = Path(save_dir) / f"{task}_{episode_dir.name}.gif"
             save_path.parent.mkdir(parents=True, exist_ok=True)
             self.visualize_one_episode(episode_dir, save_path)
         return

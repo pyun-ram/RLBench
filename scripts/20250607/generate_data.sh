@@ -1,6 +1,6 @@
 SAVE_PATH=./data/
 
-for task in reach_three_moving_targets_on_the_table_nocpst reach_three_moving_targets_on_the_table_cpst
+for task in reach_single_moving_target_with_gravity
 do
 python3 tools/dataset_generator.py \
     --tasks=$task \

@@ -89,7 +89,6 @@ def init_target_state(
     idx = np.random.choice(valid_points.shape[0])
     target_state = valid_points[idx]
     target_state = target_state.tolist()
-    print(target_state)
     return target_state[:3], target_state[3:6], target_state[6:9]
 
 

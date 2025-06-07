@@ -150,7 +150,6 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
             v0=None,
             a0=[0, 0, 0] if not bool_a else None,
         )
-        print(v, np.linalg.norm(v))
         # save target_state
         self.target_state_list.append({
             "x": x,

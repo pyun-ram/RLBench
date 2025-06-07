@@ -123,7 +123,6 @@ def compute_delay(cur_position, tar_position):
 class ReachSingleMovingTargetOnTheTableCpst(Task):
 
     def init_task(self) -> None:
-        np.random.seed(123)
         self.success_sensor = ProximitySensor('success')
         self.waypoint0 = Dummy('waypoint0')
         self.target = Shape('target')

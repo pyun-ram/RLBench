@@ -117,3 +117,5 @@ dmypy.json
 .pyre/
 
 index.html
+data/
+vis_*/

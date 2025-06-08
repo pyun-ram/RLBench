@@ -1,47 +1,66 @@
-from typing import List, Tuple
-from rlbench.backend.task import Task
-from pyrep.objects import ProximitySensor, Shape, Dummy
-from rlbench.backend.conditions import DetectedCondition
 import numpy as np
+
 from tqdm import tqdm
 from pathlib import Path
+from typing import List, Tuple
 
-def get_state_config(var_index: int):
+from rlbench.backend.task import Task
+from rlbench.backend.conditions import DetectedCondition
+from pyrep.objects import ProximitySensor, Shape, Dummy
+
+
+def get_state_config(var_index: int) -> bool:
     if var_index == 0:
         bool_a = False
     elif var_index == 1:
-        # v0, a
         bool_a = True
     else:
         raise ValueError("var_index must be 0, 1")
     return bool_a
 
+
 def init_target_state(
-    area: List[float],
     t_max: float,
+    x_range: List[float],
+    v_range: List[float],
+    a_range: List[float],
+    dx: List[float],
+    dv: List[float],
+    da: List[float],
     x0: List[float] = None,
     v0: List[float] = None,
     a0: List[float] = None,
     dt: float = 0.05,
-):
+    min_velo_norm: float = 0,
+    min_acc_norm: float = 0,
+) -> Tuple[List[float]]:
     '''
     Args:
-        area: List[float], [xmin,ymin,zmin,xmax,ymax,zmax] in Fworld
         t_max: float, max time
+        x_range: List[float], [xmin,ymin,zmin,xmax,ymax,zmax] in Fworld
+        v_range: List[float], [vxmin,vymin,vzmin,vxmax,vymax,vzmax] in Fworld
+        a_range: List[float], [axmin,aymin,azmin,axmax,aymax,azmax] in Fworld
+        dx: List[float], [dx,dy,dz]
+        dv: List[float], [dvx,dvy,dvz]
+        da: List[float], [dvx,dvy,dvz]
         x0: List[float], initial position, 
-        v0: float, initial velocity
-        a0: float, initial acceleration
+        v0: List[float], initial velocity
+        a0: List[float], initial acceleration
         dt: float
+        min_velo_norm: float = 0,
+        min_acc_norm: float = 0,
     Return:
-        List[float], target state (x, v, a)
+        Tuple[List[float]], target state (x, v, a)
     '''
-    dx = [0.05, 0.05, 0.05]
-    dv = [0.006, 0.006, 0.006]
-    da = [0.001, 0.001, 0.001]
-    x_range = area if x0 is None else [x0[0], x0[1], x0[2], x0[0], x0[1], x0[2]]
-    v_range = [-0.05, -0.05, 0, 0.05, 0.05, 0] if v0 is None else [v0[0], v0[1], v0[2], v0[0], v0[1], v0[2]]
-    a_range = [-0.002, -0.002, 0, 0.002, 0.002, 0] if a0 is None else [a0[0], a0[1], a0[2], a0[0], a0[1], a0[2]]
-    cache_name = "_".join([f'{itm}' for itm in x_range+v_range+a_range+dx+dv+da])
+    x_range = x_range if x0 is None else [
+        x0[0], x0[1], x0[2], x0[0], x0[1], x0[2]]
+    v_range = v_range if v0 is None else [
+        v0[0], v0[1], v0[2], v0[0], v0[1], v0[2]]
+    a_range = a_range if a0 is None else [
+        a0[0], a0[1], a0[2], a0[0], a0[1], a0[2]]
+    args = x_range+v_range+a_range+dx+dv+da + \
+        [t_max, dt, min_velo_norm, min_acc_norm]
+    cache_name = "_".join([f'{itm}' for itm in args])
     cache_name = f"/tmp/{cache_name}.npy"
     if not Path(cache_name).exists():
         xs = np.arange(x_range[0], x_range[3] + dx[0]/2, dx[0])
@@ -54,21 +73,26 @@ def init_target_state(
         ays = np.arange(a_range[1], a_range[4] + da[1]/2, da[1])
         azs = np.arange(a_range[2], a_range[5] + da[2]/2, da[2])
 
-        grid = np.array(np.meshgrid(xs, ys, zs, vxs, vys, vzs, axs, ays, azs, indexing='ij'))
+        grid = np.array(np.meshgrid(xs, ys, zs, vxs, vys,
+                        vzs, axs, ays, azs, indexing='ij'))
         points = grid.reshape(9, -1).T
         t_samples = np.arange(0, t_max + dt/2, dt)
 
         valid_mask = np.ones(points.shape[0], dtype=bool)
         for t in tqdm(t_samples):
-            pos = points[:, 0:3] + points[:, 3:6] * t + 0.5 * points[:, 6:9] * t**2
+            pos = points[:, 0:3] + points[:, 3:6] * \
+                t + 0.5 * points[:, 6:9] * t**2
             in_box = (
-                (area[0] <= pos[:, 0]) & (pos[:, 0] <= area[3]) &
-                (area[1] <= pos[:, 1]) & (pos[:, 1] <= area[4]) &
-                (area[2] <= pos[:, 2]) & (pos[:, 2] <= area[5])
+                (x_range[0] <= pos[:, 0]) & (pos[:, 0] <= x_range[3]) &
+                (x_range[1] <= pos[:, 1]) & (pos[:, 1] <= x_range[4]) &
+                (x_range[2] <= pos[:, 2]) & (pos[:, 2] <= x_range[5])
             )
-            valid_velocity = np.linalg.norm(points[:, 3:6], axis=-1) >= 0.03
+            valid_velocity = np.linalg.norm(
+                points[:, 3:6], axis=-1) >= min_velo_norm
+            valid_acc = np.linalg.norm(points[:, 6:9], axis=-1) >= min_acc_norm
             valid_mask &= in_box
             valid_mask &= valid_velocity
+            valid_acc &= valid_acc
             if not valid_mask.any():
                 break
 
@@ -85,13 +109,13 @@ def init_target_state(
 
 
 def compute_target_position(
-        t: float,
-        x0: List[float],
-        v0: List[float],
-        a0: List[float],
-        t0: float,
-        dt: float,
-    ) -> List[float]:
+    t: float,
+    x0: List[float],
+    v0: List[float],
+    a0: List[float],
+    t0: float,
+    dt: float = None,
+) -> List[float]:
     '''
     Args:
         t: float, current time
@@ -109,32 +133,24 @@ def compute_target_position(
     pos = x0 + v0 * t_rel + 0.5 * a0 * t_rel**2
     return pos.tolist()
 
-def compute_delay(cur_position, tar_position):
-    '''
-    Args:
-        cur_position: List[float], current position (x,y,z)
-        tar_position: List[float], target position (x,y,z)
-    Return:
-        float, delay
-    '''
-    avr_speed = 0.2 # (m/s)
-    return np.linalg.norm(cur_position - tar_position) / avr_speed
 
 class ReachSingleMovingTargetOnTheTableNocpst(Task):
 
     def init_task(self) -> None:
-        self.success_sensor = ProximitySensor('success')
-        self.waypoint0 = Dummy('waypoint0')
         self.target = Shape('target')
-        # [xmin,ymin,zmin,xmax,ymax,zmax] in Fworld
+        self.waypoint0 = Dummy('waypoint0')
+        self.success_sensor = ProximitySensor('success')
+        self.t = None
+        self.step_id = None
+        self.target_state_list = None
+        self.t_max = 4  # (s)
+        # area [xmin,ymin,zmin,xmax,ymax,zmax] in Fworld
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 20 # (s)
-        self.step_id = 0
-        self.t = 0
-        self.target_state_list = []
-        self.register_success_conditions([
-            DetectedCondition(self.robot.arm.get_tip(), self.success_sensor)
-        ])
+        self.condition = DetectedCondition(
+            self.robot.arm.get_tip(),
+            self.success_sensor,
+        )
+        self.register_success_conditions([self.condition])
         self.register_waypoint_ability_start(0, self._move_above_object)
         self.register_waypoints_should_repeat(self._repeat)
         return
@@ -143,20 +159,25 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
         var_index = index
         bool_a = get_state_config(var_index)
         x, v, a = init_target_state(
-            self.area,
-            self.t_max,
+            t_max=self.t_max,
+            x_range=self.area,
+            v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
+            a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
             x0=None,
             v0=None,
             a0=[0, 0, 0] if not bool_a else None,
+            dx=[0.05, 0.05, 0.05],
+            dv=[0.025, 0.025, 0.025],
+            da=[0.001, 0.001, 0.001],
         )
         # save target_state
+        self.cleanup()
         self.target_state_list.append({
             "x": x,
             "v": v,
             "a": a,
             "t0": 0,
         })
-        self.t = 0
         self.target.set_position(x)
         return [
             "reach single moving target",
@@ -183,15 +204,17 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
         return
 
     def cleanup(self) -> None:
-        # Called during at the end of each episode. Remove this if not using.
-        pass
+        self.target_state_list = []
+        self.t = 0
+        self.step_id = 0
+        return
 
     def _move_above_object(self, waypoint):
         tip_tar_position = self.target.get_position()
         way_obj = waypoint.get_waypoint_object()
         way_obj.set_position(tip_tar_position)
         return
-    
+
     def _repeat(self):
         return True
 

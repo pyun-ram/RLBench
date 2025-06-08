@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List
 from .reach_single_moving_target_with_gravity import ReachSingleMovingTargetWithGravity
+from .reach_single_moving_target_on_the_table_cpst import compute_delay
 
 class ReachSingleBouncingBall(ReachSingleMovingTargetWithGravity):
 
@@ -67,3 +68,32 @@ class ReachSingleBouncingBall(ReachSingleMovingTargetWithGravity):
                 t_curr = t_next
         return pos.tolist()
 
+    def _move_above_object(self, waypoint):
+        T = 5 # s
+        dt = 0.1 # s
+        min_t_diff = np.inf
+        new_wp_position = None
+        target_state_dict = self.target_state_list[-1]
+        v = np.array(target_state_dict['v']) + \
+            np.array(target_state_dict['a']) * \
+            (self.t - target_state_dict['t0'])
+        for t in np.arange(0, T + dt/2, dt):
+            x_tar = self.compute_target_position(
+                t=self.t+t,
+                t0=self.t,
+                x0=self.target.get_position(),
+                v0=v,
+                a0=target_state_dict['a'],
+                dt=self.pyrep.get_simulation_timestep(),
+            )
+            t_delay = compute_delay(
+                self.robot.arm,
+                x_tar,
+            )
+            t_diff = np.linalg.norm(t_delay - t)
+            if t_diff < min_t_diff:
+                min_t_diff = t_diff
+                new_wp_position = x_tar
+        way_obj = waypoint.get_waypoint_object()
+        way_obj.set_position(new_wp_position)
+        return

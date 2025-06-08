@@ -140,6 +140,7 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
         self.target = Shape('target')
         self.waypoint0 = Dummy('waypoint0')
         self.success_sensor = ProximitySensor('success')
+        self.var_index = None
         self.t = None
         self.step_id = None
         self.target_state_list = None
@@ -156,8 +157,8 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
         return
 
     def init_episode(self, index: int) -> List[str]:
-        var_index = index
-        bool_a = get_state_config(var_index)
+        self.var_index = index
+        bool_a = get_state_config(self.var_index)
         x, v, a = init_target_state(
             t_max=self.t_max,
             x_range=self.area,

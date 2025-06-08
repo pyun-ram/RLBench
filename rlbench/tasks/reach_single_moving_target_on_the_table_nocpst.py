@@ -21,6 +21,7 @@ def get_state_config(var_index: int) -> bool:
 
 def init_target_state(
     t_max: float,
+    area: List[float],
     x_range: List[float],
     v_range: List[float],
     a_range: List[float],
@@ -59,7 +60,7 @@ def init_target_state(
     a_range = a_range if a0 is None else [
         a0[0], a0[1], a0[2], a0[0], a0[1], a0[2]]
     args = x_range+v_range+a_range+dx+dv+da + \
-        [t_max, dt, min_velo_norm, min_acc_norm]
+        [area, t_max, dt, min_velo_norm, min_acc_norm]
     cache_name = "_".join([f'{itm}' for itm in args])
     cache_name = f"/tmp/{cache_name}.npy"
     if not Path(cache_name).exists():
@@ -83,16 +84,16 @@ def init_target_state(
             pos = points[:, 0:3] + points[:, 3:6] * \
                 t + 0.5 * points[:, 6:9] * t**2
             in_box = (
-                (x_range[0] <= pos[:, 0]) & (pos[:, 0] <= x_range[3]) &
-                (x_range[1] <= pos[:, 1]) & (pos[:, 1] <= x_range[4]) &
-                (x_range[2] <= pos[:, 2]) & (pos[:, 2] <= x_range[5])
+                (area[0] <= pos[:, 0]) & (pos[:, 0] <= area[3]) &
+                (area[1] <= pos[:, 1]) & (pos[:, 1] <= area[4]) &
+                (area[2] <= pos[:, 2]) & (pos[:, 2] <= area[5])
             )
             valid_velocity = np.linalg.norm(
                 points[:, 3:6], axis=-1) >= min_velo_norm
             valid_acc = np.linalg.norm(points[:, 6:9], axis=-1) >= min_acc_norm
             valid_mask &= in_box
             valid_mask &= valid_velocity
-            valid_acc &= valid_acc
+            valid_mask &= valid_acc
             if not valid_mask.any():
                 break
 
@@ -106,7 +107,6 @@ def init_target_state(
     target_state = valid_points[idx]
     target_state = target_state.tolist()
     return target_state[:3], target_state[3:6], target_state[6:9]
-
 
 def compute_target_position(
     t: float,
@@ -161,6 +161,7 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
         bool_a = get_state_config(self.var_index)
         x, v, a = init_target_state(
             t_max=self.t_max,
+            area=self.area,
             x_range=self.area,
             v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
             a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
@@ -170,6 +171,8 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
             dx=[0.05, 0.05, 0.05],
             dv=[0.025, 0.025, 0.025],
             da=[0.001, 0.001, 0.001],
+            min_velo_norm=0.03,
+            min_acc_norm=0.01 if bool_a else 0,
         )
         # save target_state
         self.cleanup()

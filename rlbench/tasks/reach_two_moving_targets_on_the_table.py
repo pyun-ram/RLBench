@@ -15,6 +15,7 @@ class ReachTwoMovingTargetsOnTheTable(ReachSingleMovingTargetOnTheTableCpst):
             while np.linalg.norm(x - cur_x) < 0.2:
                 x, v, a = init_target_state(
                     t_max=self.t_max,
+                    area=self.area,
                     x_range=self.area,
                     v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
                     a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],

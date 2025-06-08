@@ -1,6 +1,6 @@
 import numpy as np
 from .reach_single_moving_target_on_the_table_nocpst import (
-    ReachSingleMovingTargetOnTheTableNocpst, compute_target_position)
+    ReachSingleMovingTargetOnTheTableNocpst)
 from pyrep.backend import sim
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 
@@ -55,7 +55,7 @@ class ReachSingleMovingTargetOnTheTableCpst(ReachSingleMovingTargetOnTheTableNoc
         v = np.array(target_state_dict['v']) + \
             np.array(target_state_dict['a']) * \
             (self.t - target_state_dict['t0'])
-        new_wp_position = compute_target_position(
+        new_wp_position = self.compute_target_position(
             t=self.t+t_delay,
             t0=self.t,
             x0=self.target.get_position(),

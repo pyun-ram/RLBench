@@ -16,14 +16,18 @@ class ReachSingleMovingTargetWithGravity(ReachSingleMovingTargetOnTheTableCpst):
         super().init_task()
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 1.2]
         self.t_max = 5 #(s)
+        self.min_velo_norm = 0.03
+        self.min_acc_norm = 0.03
+        self.a_range = [0, 0, -0.035, 0, 0, 0]
+        self.dx = [0.05, 0.05, 0.05]
+        self.dv = [0.01, 0.01, 0.01]
+        self.da = [0.001, 0.001, 0.001]
         return
     
     def init_episode(self, index: int) -> List[str]:
         self.var_index = index
         direction = get_state_config(self.var_index)
         area = self.area
-        min_velo_norm = 0.03
-        min_acc_norm = 0.01
         if direction == 'left':
             x_range = [area[0], area[1], area[5], area[3], area[1], area[5]]
             v_range = [0, 0, 0, 0, 0.1, 0.1]
@@ -35,15 +39,15 @@ class ReachSingleMovingTargetWithGravity(ReachSingleMovingTargetOnTheTableCpst):
             area=area,
             x_range=x_range,
             v_range=v_range,
-            a_range=[0, 0, -0.035, 0, 0, 0],
+            a_range=self.a_range,
             x0=None,
             v0=None,
             a0=None,
-            dx = [0.05, 0.05, 0.05],
-            dv = [0.01, 0.01, 0.01],
-            da = [0.001, 0.001, 0.001],
-            min_velo_norm=min_velo_norm,
-            min_acc_norm=min_acc_norm,
+            dx = self.dx,
+            dv = self.dv,
+            da = self.da,
+            min_velo_norm=self.min_velo_norm,
+            min_acc_norm=self.min_acc_norm,
         )
         # save target_state
         self.cleanup()

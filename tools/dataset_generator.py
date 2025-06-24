@@ -22,7 +22,7 @@ import numpy as np
 
 from absl import app
 from absl import flags
-from typing import Tuple
+from typing import Tuple, List
 
 FLAGS = flags.FLAGS
 
@@ -338,7 +338,7 @@ def init_multiple_cameras(
     assert all([itm < max_num_cam for itm in cam_name_list]), err_msg
     pose_list = _gen_pose_list(num_cam=max_num_cam)
     pose_list = [pose_list[idx] for idx in cam_name_list]
-    for i in range(num_cam):
+    for i in range(len(pose_list)):
         cam_placeholder = Dummy('cam_cinematic_placeholder')
         cam = VisionSensor.create(
             resolution=camera_resolution,
@@ -438,7 +438,7 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
         for ex_idx in range(FLAGS.episodes_per_task):
             attempts = 10
             # nerf data generation
-            task_recorder = NeRFTaskRecorder(cam_list, cam_mask_list)
+            task_recorder = NeRFTaskRecorder(cam_list, cam_mask_list, cam_name_list)
             while attempts > 0:
                 try:
                     variation = np.random.randint(possible_variations)

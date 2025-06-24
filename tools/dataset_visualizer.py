@@ -42,6 +42,8 @@ class Runner:
         left_shoulder_rgb_dir = root_dir / "left_shoulder_rgb"
         right_shoulder_rgb_dir = root_dir / "right_shoulder_rgb"
         wrist_rgb_dir = root_dir / "wrist_rgb"
+        nerf_data_dir = root_dir / "nerf_data"
+        nerf_cam_names = [itm.stem for itm in nerf_data_dir.glob("0/images/*.png")]
 
         steps = [itm.stem for itm in front_rgb_dir.iterdir() if itm.suffix == '.png']
         steps = sorted(steps, key=lambda x: int(x))
@@ -52,6 +54,10 @@ class Runner:
             images = []
             for cam_dir in [front_rgb_dir, overhead_rgb_dir, left_shoulder_rgb_dir, right_shoulder_rgb_dir]:
                 image_path = cam_dir / f"{step}.png"
+                image_ = read_image(image_path)
+                images.append(image_)
+            for nerf_cam_name in nerf_cam_names:
+                image_path = nerf_data_dir / f"{step}/images/{nerf_cam_name}.png"
                 image_ = read_image(image_path)
                 images.append(image_)
             image = np.concatenate(images, axis=1)

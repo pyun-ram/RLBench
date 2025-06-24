@@ -18,6 +18,9 @@ def write_pkl(obj, path):
     with open(path, 'wb') as file:
         pickle.dump(obj, file)
 
+def write_image(image:np.ndarray, path: str):
+    return Image.fromarray(image).save(path)
+
 class InvalidTaskName(Exception):
     pass
 

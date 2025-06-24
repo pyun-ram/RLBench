@@ -1,11 +1,11 @@
 import os
-import cv2
 import numpy as np
 from pyrep.objects.dummy import Dummy
 from pyrep.objects.vision_sensor import VisionSensor
 from rlbench.backend.observation import Observation
 from rlbench.backend import utils
 from rlbench.backend.const import *
+from rlbench.utils import write_image, write_pkl
 from PIL import Image
 
 class CameraMotion(object):
@@ -39,9 +39,10 @@ class NeRFTaskRecorder(object):
     for nerf data generation
     """
 
-    def __init__(self, cam_list, cam_mask_list):
+    def __init__(self, cam_list, cam_mask_list, cam_name_list):
         self._cam_list = cam_list
         self._cam_mask_list = cam_mask_list
+        self._cam_name_list = cam_name_list
 
         self._snaps_episode = []
         self._depths_episode = []
@@ -99,7 +100,7 @@ class NeRFTaskRecorder(object):
 
 
     def save_extrinsic_and_intrinsic(self, path, extrinsic, intrinsic, near, far):
-        utils.write_pkl({
+        return write_pkl({
             "intrinsic": intrinsic,
             "extrinsic": extrinsic,
             "near": near,
@@ -134,25 +135,25 @@ class NeRFTaskRecorder(object):
             all_near_far = self._near_far_episode[t]
             for i, view in enumerate(all_views):
                 # save the image
-                img_path = os.path.join(timestep_img_dir, str(i) + '.png')
-                view = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
-                cv2.imwrite(img_path, view)
+                cam_name = self._cam_name_list[i]
+                img_path = os.path.join(timestep_img_dir, str(cam_name) + '.png')
+                write_image(view, img_path)
 
                 # save the depth
-                depth_path = os.path.join(timestep_depth_dir, str(i) + '.png')
+                depth_path = os.path.join(timestep_depth_dir, str(cam_name) + '.png')
                 depth = self._depths_episode[t][i]
                 depth = utils.float_array_to_rgb_image(depth, scale_factor=DEPTH_SCALE)
                 depth.save(depth_path)
                 
                 # save the mask
-                mask_path = os.path.join(timestep_mask_dir, str(i) + '.png')
+                mask_path = os.path.join(timestep_mask_dir, str(cam_name) + '.png')
                 mask = self._mask_episode[t][i]
                 mask = Image.fromarray((mask * 255).astype(np.uint8))
                 mask.save(mask_path)
                 
                 
                 # save the pose and intrinsic
-                pose_path = os.path.join(timestep_pose_dir, str(i) + '.pkl')
+                pose_path = os.path.join(timestep_pose_dir, str(cam_name) + '.pkl')
                 transformation_matrix =  all_poses[i]
                 intrinsic_matrix = all_intrinsics[i]
                 near, far = all_near_far[i]

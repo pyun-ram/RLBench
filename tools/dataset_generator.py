@@ -302,7 +302,7 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
     rlbench_env.shutdown()
 
 def init_multiple_cameras(
-    num_cam: int,
+    cam_name_list: List,
     camera_resolution: Tuple[int, int],
 ):
     def _gen_pose_list(num_cam):
@@ -333,7 +333,11 @@ def init_multiple_cameras(
         return pose_list[:num_cam]
 
     cam_list, cam_mask_list = [], []
-    pose_list = _gen_pose_list(num_cam)
+    max_num_cam = 40
+    err_msg = f"Error: the default camera views is 0-{max_num_cam}"
+    assert all([itm < max_num_cam for itm in cam_name_list]), err_msg
+    pose_list = _gen_pose_list(num_cam=max_num_cam)
+    pose_list = [pose_list[idx] for idx in cam_name_list]
     for i in range(num_cam):
         cam_placeholder = Dummy('cam_cinematic_placeholder')
         cam = VisionSensor.create(
@@ -407,8 +411,8 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
     # nerf data generation
     # ========================================================================
     camera_resolution = img_size
-    num_views = 40 # circle
-    cam_list, cam_mask_list = init_multiple_cameras(num_views, camera_resolution)
+    cam_name_list = [0, 8, 16, 24, 32]
+    cam_list, cam_mask_list = init_multiple_cameras(cam_name_list, camera_resolution)
     # ========================================================================
 
     while True:

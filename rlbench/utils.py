@@ -14,6 +14,9 @@ from rlbench.backend.utils import image_to_float_array, rgb_handles_to_mask
 from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
 
+def write_pkl(obj, path):
+    with open(path, 'wb') as file:
+        pickle.dump(obj, file)
 
 class InvalidTaskName(Exception):
     pass

@@ -98,18 +98,13 @@ class NeRFTaskRecorder(object):
         return
 
 
-    def save_extrinsic_and_intrinsic(self, path, extrinsic, intrinsic):
-
-        with open(path, 'w') as f:
-            for row in extrinsic:
-                for ele in row:
-                    f.write('{:.6f}'.format(ele) + ' ')
-                f.write('\n')
-            f.write('\n')
-            for row in intrinsic:
-                for ele in row:
-                    f.write('{:.6f}'.format(ele) + ' ')
-                f.write('\n')
+    def save_extrinsic_and_intrinsic(self, path, extrinsic, intrinsic, near, far):
+        utils.write_pkl({
+            "intrinsic": intrinsic,
+            "extrinsic": extrinsic,
+            "near": near,
+            "far": far,
+        }, path)
 
 
     def save(self, path_dir):
@@ -136,6 +131,7 @@ class NeRFTaskRecorder(object):
 
             all_poses = self._poses_episode[t]
             all_intrinsics = self._intrinsics_episode[t]
+            all_near_far = self._near_far_episode[t]
             for i, view in enumerate(all_views):
                 # save the image
                 img_path = os.path.join(timestep_img_dir, str(i) + '.png')
@@ -156,10 +152,15 @@ class NeRFTaskRecorder(object):
                 
                 
                 # save the pose and intrinsic
-                pose_path = os.path.join(timestep_pose_dir, str(i) + '.txt')
+                pose_path = os.path.join(timestep_pose_dir, str(i) + '.pkl')
                 transformation_matrix =  all_poses[i]
                 intrinsic_matrix = all_intrinsics[i]
-
-                self.save_extrinsic_and_intrinsic(pose_path, transformation_matrix, intrinsic_matrix)
-        
+                near, far = all_near_far[i]
+                self.save_extrinsic_and_intrinsic(
+                    pose_path,
+                    extrinsic=transformation_matrix,
+                    intrinsic=intrinsic_matrix,
+                    near=near,
+                    far=far,
+                )
         self.reset()

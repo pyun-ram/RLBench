@@ -1,8 +1,11 @@
 from multiprocessing import Process, Manager
 
 from pyrep.const import RenderMode
+from pyrep.objects.dummy import Dummy
+from pyrep.objects.vision_sensor import VisionSensor
 
 from rlbench import ObservationConfig
+from rlbench.video_utils import CircleCameraMotion, NeRFTaskRecorder
 from rlbench.action_modes.action_mode import MoveArmThenGripper
 from rlbench.action_modes.arm_action_modes import JointVelocity
 from rlbench.action_modes.gripper_action_modes import Discrete
@@ -19,6 +22,7 @@ import numpy as np
 
 from absl import app
 from absl import flags
+from typing import Tuple
 
 FLAGS = flags.FLAGS
 
@@ -297,6 +301,58 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
     results[i] = tasks_with_problems
     rlbench_env.shutdown()
 
+def init_multiple_cameras(
+    num_cam: int,
+    camera_resolution: Tuple[int, int],
+):
+    def _gen_pose_list(num_cam):
+        assert num_cam < 63
+        _cam_placeholder = Dummy('cam_cinematic_placeholder')
+        _cam = VisionSensor.create(
+            resolution=camera_resolution,
+            render_mode=RenderMode.OPENGL,
+        )
+        _cam.set_parent(_cam_placeholder)
+        _cam.set_pose(VisionSensor('cam_front').get_pose())
+        rotate_speed = 0.1
+        _cam_motion = CircleCameraMotion(
+            _cam,
+            Dummy('cam_cinematic_base'),
+            rotate_speed,
+        )
+        pose_list = []
+        num_all = 63
+        for _ in range(num_all):
+            _cam_motion.step()
+            _cam_motion.save_pose()
+            _cam_motion.restore_pose()
+            _pose = _cam.get_pose()
+            pose_list.append(_pose)
+        inter = num_all // num_cam
+        pose_list = pose_list[0:len(pose_list):inter]
+        return pose_list[:num_cam]
+
+    cam_list, cam_mask_list = [], []
+    pose_list = _gen_pose_list(num_cam)
+    for i in range(num_cam):
+        cam_placeholder = Dummy('cam_cinematic_placeholder')
+        cam = VisionSensor.create(
+            resolution=camera_resolution,
+            render_mode=RenderMode.OPENGL,
+        )
+        cam.set_pose(pose_list[i])
+        cam.set_parent(cam_placeholder)
+        cam_list.append(cam)
+
+        cam_placeholder = Dummy('cam_cinematic_placeholder')
+        cam_mask = VisionSensor.create(
+            resolution=camera_resolution,
+            render_mode=RenderMode.OPENGL_COLOR_CODED,
+        )
+        cam_mask.set_pose(pose_list[i])
+        cam_mask.set_parent(cam_placeholder)
+        cam_mask_list.append(cam_mask)
+    return cam_list, cam_mask_list
 
 def run_all_variations(i, lock, task_index, variation_count, results, file_lock, tasks):
     """Each thread will choose one task and variation, and then gather
@@ -347,6 +403,14 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
 
     tasks_with_problems = results[i] = ''
 
+    # ========================================================================
+    # nerf data generation
+    # ========================================================================
+    camera_resolution = img_size
+    num_views = 40 # circle
+    cam_list, cam_mask_list = init_multiple_cameras(num_views, camera_resolution)
+    # ========================================================================
+
     while True:
         # with lock:
         if task_index.value >= num_tasks:
@@ -369,12 +433,15 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
         abort_variation = False
         for ex_idx in range(FLAGS.episodes_per_task):
             attempts = 10
+            # nerf data generation
+            task_recorder = NeRFTaskRecorder(cam_list, cam_mask_list)
             while attempts > 0:
                 try:
                     variation = np.random.randint(possible_variations)
                     task_env = rlbench_env.get_task(t)
                     task_env.set_variation(variation)
                     descriptions, obs = task_env.reset()
+                    task_recorder.record_task_description(descriptions)
 
                     print('Process', i, '// Task:', task_env.get_name(),
                           '// Variation:', variation, '// Demo:', ex_idx)
@@ -382,7 +449,10 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
                     # TODO: for now we do the explicit looping.
                     demo, = task_env.get_demos(
                         amount=1,
-                        live_demos=True)
+                        live_demos=True,
+                        callable_each_step=task_recorder.take_snap,
+                        recorder = task_recorder
+                        )
                 except Exception as e:
                     attempts -= 1
                     if attempts > 0:
@@ -404,6 +474,11 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
                     with open(os.path.join(
                             episode_path, VARIATION_DESCRIPTIONS), 'wb') as f:
                         pickle.dump(descriptions, f)
+                    # ========================================================================
+                    # nerf data generation
+                    # ========================================================================
+                    record_file_path = os.path.join(episode_path, 'nerf_data')
+                    task_recorder.save(record_file_path)
                 break
             if abort_variation:
                 break

@@ -45,3 +45,15 @@ class ReachTwoMovingTargetsOnTheTable(ReachSingleMovingTargetOnTheTableCpst):
         super().cleanup()
         self.counter = 0
         return
+
+    def init_episode(self, index: int) -> List[str]:
+        super().init_episode(index)
+        bool_a = get_state_config(self.var_index)
+        if bool_a:
+            return [
+                "reach two accelerated balls on the table",
+            ]
+        else:
+            return [
+                "reach two uniform-speed balls on the table",
+            ]

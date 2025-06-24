@@ -61,3 +61,10 @@ class ReachTwoMovingTargetsWithGravity(ReachSingleMovingTargetWithGravity):
         super().cleanup()
         self.counter = 0
         return
+
+    def init_episode(self, index: int) -> List[str]:
+        super().init_episode(index)
+        direction = get_state_config(self.var_index)
+        return [
+            f"reach two falling balls, first from {direction}",
+        ]

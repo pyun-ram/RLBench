@@ -17,6 +17,13 @@ class ReachSingleBouncingBall(ReachSingleMovingTargetWithGravity):
         self.da = [0.01, 0.01, 0.01]
         return
     
+    def init_episode(self, index: int) -> List[str]:
+        super().init_episode(index)
+        direction = get_state_config(self.var_index)
+        return [
+            f"reach single bouncing ball from {direction}",
+        ]
+
     def compute_target_position(
         self,
         t: float,

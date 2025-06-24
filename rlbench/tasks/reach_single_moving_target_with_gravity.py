@@ -59,6 +59,5 @@ class ReachSingleMovingTargetWithGravity(ReachSingleMovingTargetOnTheTableCpst):
         })
         self.target.set_position(x)
         return [
-            "reach single moving target",
-            "reach single moving target on the table",
+            f"reach single falling ball from {direction}",
         ]

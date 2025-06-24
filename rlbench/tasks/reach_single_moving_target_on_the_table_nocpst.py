@@ -158,10 +158,14 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
             "t0": 0,
         })
         self.target.set_position(x)
-        return [
-            "reach single moving target",
-            "reach single moving target on the table",
-        ]
+        if bool_a:
+            return [
+                "reach single accelerated ball on the table"
+            ]
+        else:
+            return [
+                "reach single uniform-speed ball on the table"
+            ]
 
     def compute_target_position(
         self,

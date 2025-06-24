@@ -2,6 +2,7 @@ from pyrep.objects import ProximitySensor, Shape, Dummy
 import numpy as np
 from .reach_single_moving_target_with_gravity import (
     ReachSingleMovingTargetWithGravity, init_target_state)
+from typing import List
 
 def get_state_config(var_index: int):
     if var_index == 0:
@@ -66,5 +67,5 @@ class ReachTwoMovingTargetsWithGravity(ReachSingleMovingTargetWithGravity):
         super().init_episode(index)
         direction = get_state_config(self.var_index)
         return [
-            f"reach two falling balls, first from {direction}",
+            f"reach two falling balls, first from {direction[0]}",
         ]

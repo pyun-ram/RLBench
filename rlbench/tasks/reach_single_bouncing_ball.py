@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List
-from .reach_single_moving_target_with_gravity import ReachSingleMovingTargetWithGravity
+from .reach_single_moving_target_with_gravity import ReachSingleMovingTargetWithGravity, get_state_config
 from .reach_single_moving_target_on_the_table_cpst import compute_delay
 
 class ReachSingleBouncingBall(ReachSingleMovingTargetWithGravity):

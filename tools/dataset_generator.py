@@ -344,6 +344,7 @@ def init_multiple_cameras(
             resolution=camera_resolution,
             render_mode=RenderMode.OPENGL,
         )
+        cam.set_name(f'{cam_name_list[i]}')
         cam.set_pose(pose_list[i])
         cam.set_parent(cam_placeholder)
         cam_list.append(cam)

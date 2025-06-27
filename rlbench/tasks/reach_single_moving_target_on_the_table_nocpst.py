@@ -129,36 +129,45 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
         self.register_success_conditions([self.condition])
         self.register_waypoint_ability_start(0, self._move_above_object)
         self.register_waypoints_should_repeat(self._repeat)
+        self.var2target_state_list = {}
+        for var_index in range(self.variation_count()):
+            self.var2target_state_list[var_index] = []
+            bool_a = get_state_config(var_index)
+            x, v, a = init_target_state(
+                t_max=self.t_max,
+                area=self.area,
+                x_range=self.area,
+                v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
+                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                x0=None,
+                v0=None,
+                a0=[0, 0, 0] if not bool_a else None,
+                dx=[0.05, 0.05, 0.05],
+                dv=[0.025, 0.025, 0.025],
+                da=[0.001, 0.001, 0.001],
+                min_velo_norm=0.03,
+                min_acc_norm=0.01 if bool_a else 0,
+            )
+            self.var2target_state_list[var_index].append({
+                "x": x,
+                "v": v,
+                "a": a,
+            })
         return
 
     def init_episode(self, index: int) -> List[str]:
         self.var_index = index
-        bool_a = get_state_config(self.var_index)
-        x, v, a = init_target_state(
-            t_max=self.t_max,
-            area=self.area,
-            x_range=self.area,
-            v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
-            a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
-            x0=None,
-            v0=None,
-            a0=[0, 0, 0] if not bool_a else None,
-            dx=[0.05, 0.05, 0.05],
-            dv=[0.025, 0.025, 0.025],
-            da=[0.001, 0.001, 0.001],
-            min_velo_norm=0.03,
-            min_acc_norm=0.01 if bool_a else 0,
-        )
+        target_state = self.var2target_state_list[self.var_index][0]
         # save target_state
         self.cleanup()
         self.target_state_list.append({
-            "x": x,
-            "v": v,
-            "a": a,
+            "x": target_state["x"],
+            "v": target_state["v"],
+            "a": target_state["a"],
             "t0": 0,
         })
-        self.target.set_position(x)
-        if bool_a:
+        self.target.set_position(target_state["x"])
+        if index == 0:
             return [
                 "reach single accelerated ball on the table"
             ]

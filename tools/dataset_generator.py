@@ -478,6 +478,9 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
                     with open(os.path.join(
                             episode_path, VARIATION_DESCRIPTIONS), 'wb') as f:
                         pickle.dump(descriptions, f)
+                    if hasattr(task_env._task, 'var2target_state_list'):
+                        with open(os.path.join(episode_path, 'target_state.pkl'), 'wb') as f:
+                            pickle.dump(task_env._task.var2target_state_list, f)
                     # ========================================================================
                     # nerf data generation
                     # ========================================================================

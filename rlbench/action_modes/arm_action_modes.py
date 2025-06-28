@@ -257,6 +257,7 @@ class EndEffectorPoseViaPlanning(ArmActionMode):
             if scene.task.name in [
                 'reach_single_moving_target_on_the_table_cpst',
                 'reach_single_moving_target_with_gravity',
+                'reach_single_bouncing_ball',
                 ]:
                 scene.step(bool_step_task=False)
             else:
@@ -271,6 +272,7 @@ class EndEffectorPoseViaPlanning(ArmActionMode):
         if scene.task.name in [
                 'reach_single_moving_target_on_the_table_cpst',
                 'reach_single_moving_target_with_gravity',
+                'reach_single_bouncing_ball',
             ]:
             scene.step(bool_step_task=True)
 

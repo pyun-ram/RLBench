@@ -311,9 +311,10 @@ class Scene(object):
         obs = self.task.decorate_observation(obs)
         return obs
 
-    def step(self):
+    def step(self, bool_step_task: bool = True):
         self.pyrep.step()
-        self.task.step()
+        if bool_step_task:
+            self.task.step()
         if self._step_callback is not None:
             self._step_callback()
 

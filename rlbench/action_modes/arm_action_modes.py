@@ -254,7 +254,10 @@ class EndEffectorPoseViaPlanning(ArmActionMode):
         done = False
         while not done:
             done = path.step()
-            scene.step()
+            if scene.task.name == 'reach_single_moving_target_on_the_table_cpst':
+                scene.step(bool_step_task=False)
+            else:
+                scene.step()
             if self._callable_each_step is not None:
                 # Record observations
                 self._callable_each_step(scene.get_observation())
@@ -262,6 +265,8 @@ class EndEffectorPoseViaPlanning(ArmActionMode):
             # If the task succeeds while traversing path, then break early
             if success and self._callable_each_step is None:
                 break
+        if scene.task.name == 'reach_single_moving_target_on_the_table_cpst':
+            scene.step(bool_step_task=True)
 
     def action_shape(self, scene: Scene) -> tuple:
         return 7,

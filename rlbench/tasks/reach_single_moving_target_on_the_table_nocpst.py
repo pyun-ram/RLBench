@@ -167,7 +167,7 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
             "t0": 0,
         })
         self.target.set_position(target_state["x"])
-        if index == 0:
+        if index == 1:
             return [
                 "reach single accelerated ball on the table"
             ]

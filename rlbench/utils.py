@@ -2,7 +2,7 @@ import importlib
 import pickle
 from os import listdir
 from os.path import join, exists
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 from PIL import Image

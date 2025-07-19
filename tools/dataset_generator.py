@@ -313,7 +313,9 @@ def init_multiple_cameras(
             render_mode=RenderMode.OPENGL,
         )
         _cam.set_parent(_cam_placeholder)
-        _cam.set_pose(VisionSensor('cam_front').get_pose())
+        pose = VisionSensor('cam_front').get_pose()
+        pose[2] += 0.1
+        _cam.set_pose(pose)
         rotate_speed = 0.1
         _cam_motion = CircleCameraMotion(
             _cam,
@@ -412,7 +414,7 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
     # nerf data generation
     # ========================================================================
     camera_resolution = img_size
-    cam_name_list = [0, 8, 16, 24, 32]
+    cam_name_list = [0, 16, 36]
     cam_list, cam_mask_list = init_multiple_cameras(cam_name_list, camera_resolution)
     # ========================================================================
 
@@ -437,7 +439,7 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
 
         abort_variation = False
         for ex_idx in range(FLAGS.episodes_per_task):
-            attempts = 10
+            attempts = 1
             # nerf data generation
             task_recorder = NeRFTaskRecorder(cam_list, cam_mask_list, cam_name_list)
             while attempts > 0:

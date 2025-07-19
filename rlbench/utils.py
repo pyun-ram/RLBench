@@ -43,6 +43,14 @@ def name_to_task_class(task_file: str):
             % (class_name, name)) from e
     return task_class
 
+def get_cam_param_from_pkl(pose_path: str) -> Dict:
+    view_dict = common_utils.read_pkl(pose_path)
+    return {
+        'intrinsics': view_dict['intrinsic'],
+        'extrinsics': view_dict['extrinsic'],
+        'near': view_dict['near'],
+        'far': view_dict['far'],
+    }
 
 def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                      variation_number: int, task_name: str,
@@ -186,6 +194,29 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
 
         if not image_paths:
             for i in range(num_steps):
+                cam_names = [8, 16, 24, 32]
+                for cam_name in cam_names:
+                    rgb_path = join(example_path, f'nerf_data/{i}/images/{cam_name}.png')
+                    depth_path = join(example_path, f'nerf_data/{i}/depths/{cam_name}.png')
+                    cam_param_path = join(example_path, f'nerf_data/{i}/poses/{cam_name}.pkl')
+                    rgb = np.array(_resize_if_needed(Image.open(rgb_path), obs_config.front_camera.image_size))
+                    cam_param = get_cam_param_from_pkl(cam_param_path)
+                    depth = image_to_float_array(
+                        _resize_if_needed(
+                            Image.open(depth_path),
+                            obs_config.front_camera.image_size),
+                        DEPTH_SCALE)
+                    near = cam_param['near']
+                    far = cam_param['far']
+                    depth_m = near + depth * (far - near)
+                    point_cloud = VisionSensor.pointcloud_from_depth_and_camera_params(
+                        depth_m,
+                        cam_param['extrinsics'],
+                        cam_param['intrinsics'])
+                    setattr(obs[i], f'cam{cam_name}_point_cloud', point_cloud)
+                    setattr(obs[i], f'cam{cam_name}_rgb', rgb)
+                    setattr(obs[i], f'cam{cam_name}_depth', depth)
+
                 if obs_config.left_shoulder_camera.rgb:
                     obs[i].left_shoulder_rgb = np.array(
                         _resize_if_needed(

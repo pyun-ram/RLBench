@@ -262,7 +262,7 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
         for ex_idx in range(FLAGS.episodes_per_task):
             print('Process', i, '// Task:', task_env.get_name(),
                   '// Variation:', my_variation_count, '// Demo:', ex_idx)
-            attempts = 10
+            attempts = 1
             while attempts > 0:
                 try:
                     task_env = rlbench_env.get_task(t)
@@ -285,7 +285,7 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
                     )
                     print(problem)
                     tasks_with_problems += problem
-                    abort_variation = True
+                    abort_variation = False
                     break
                 episode_path = os.path.join(episodes_path, EPISODE_FOLDER % ex_idx)
                 with file_lock:
@@ -472,7 +472,7 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
                     )
                     print(problem)
                     tasks_with_problems += problem
-                    abort_variation = True
+                    abort_variation = False
                     break
                 episode_path = os.path.join(episodes_path, EPISODE_FOLDER % ex_idx)
                 with file_lock:

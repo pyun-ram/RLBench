@@ -14,6 +14,11 @@ from rlbench.backend.utils import image_to_float_array, rgb_handles_to_mask
 from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
 
+def read_pkl(path):
+    with open(path, "rb") as fid:
+        data = pickle.load(fid)
+    return data
+
 def write_pkl(obj, path):
     with open(path, 'wb') as file:
         pickle.dump(obj, file)
@@ -44,7 +49,7 @@ def name_to_task_class(task_file: str):
     return task_class
 
 def get_cam_param_from_pkl(pose_path: str) -> Dict:
-    view_dict = common_utils.read_pkl(pose_path)
+    view_dict = read_pkl(pose_path)
     return {
         'intrinsics': view_dict['intrinsic'],
         'extrinsics': view_dict['extrinsic'],

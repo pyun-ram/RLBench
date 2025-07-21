@@ -199,7 +199,7 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
 
         if not image_paths:
             for i in range(num_steps):
-                cam_names = [0,16,36]
+                cam_names = [8,16,36]
                 for cam_name in cam_names:
                     rgb_path = join(example_path, f'nerf_data/{i}/images/{cam_name}.png')
                     depth_path = join(example_path, f'nerf_data/{i}/depths/{cam_name}.png')

@@ -414,7 +414,7 @@ def run_all_variations(i, lock, task_index, variation_count, results, file_lock,
     # nerf data generation
     # ========================================================================
     camera_resolution = img_size
-    cam_name_list = [0, 16, 36]
+    cam_name_list = [8, 16, 36]
     cam_list, cam_mask_list = init_multiple_cameras(cam_name_list, camera_resolution)
     # ========================================================================
 

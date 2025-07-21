@@ -1,4 +1,4 @@
-SAVE_PATH=./data/20250719_robot_data/train/
+SAVE_PATH=./data/20250721_robot_data/train/
 
 for task in reach_single_moving_target_on_the_table_cpst 
 do

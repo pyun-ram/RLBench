@@ -13,7 +13,7 @@ from rlbench.backend.const import *
 from rlbench.backend.utils import image_to_float_array, rgb_handles_to_mask
 from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
-
+rgb_handles_to_mask = lambda x: x
 def read_pkl(path):
     with open(path, "rb") as fid:
         data = pickle.load(fid)
@@ -202,6 +202,7 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                 cam_names = [8,16,36]
                 for cam_name in cam_names:
                     rgb_path = join(example_path, f'nerf_data/{i}/images/{cam_name}.png')
+                    mask_path = join(example_path, f'nerf_data/{i}/masks/{cam_name}.png')
                     depth_path = join(example_path, f'nerf_data/{i}/depths/{cam_name}.png')
                     cam_param_path = join(example_path, f'nerf_data/{i}/poses/{cam_name}.pkl')
                     rgb = np.array(_resize_if_needed(Image.open(rgb_path), obs_config.front_camera.image_size))
@@ -211,6 +212,10 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                             Image.open(depth_path),
                             obs_config.front_camera.image_size),
                         DEPTH_SCALE)
+                    mask = rgb_handles_to_mask(
+                        np.array(_resize_if_needed(Image.open(
+                            mask_path),
+                            obs_config.front_camera.image_size)))
                     near = cam_param['near']
                     far = cam_param['far']
                     depth_m = near + depth * (far - near)
@@ -221,6 +226,7 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
                     setattr(obs[i], f'cam{cam_name}_point_cloud', point_cloud)
                     setattr(obs[i], f'cam{cam_name}_rgb', rgb)
                     setattr(obs[i], f'cam{cam_name}_depth', depth)
+                    setattr(obs[i], f'cam{cam_name}_mask', mask)
 
                 if obs_config.left_shoulder_camera.rgb:
                     obs[i].left_shoulder_rgb = np.array(

@@ -1,10 +1,10 @@
-SAVE_PATH=./data/20250721_robot_data_part2/train/
+SAVE_PATH=./data/20250808_close_jar/train/
 
-for task in reach_single_moving_target_on_the_table_cpst 
+for task in close_jar 
 do
 xvfb-run -a python3 tools/dataset_generator.py \
     --tasks=$task \
-    --episodes_per_task=100 \
+    --episodes_per_task=2 \
     --save_path=$SAVE_PATH \
     --image_size=256,256\
     --renderer=opengl \

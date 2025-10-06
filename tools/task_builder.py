@@ -298,7 +298,7 @@ if __name__ == '__main__':
     loaded_task.new_task()
 
     while True:
-        os.system('cls' if os.name == 'nt' else 'clear')
+        # os.system('cls' if os.name == 'nt' else 'clear')
         print('\n-----------------\n')
         print('The python file will be reloaded when simulation is restarted.')
         print('(q) to quit.')

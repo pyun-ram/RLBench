@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from rlbench.backend.task import Task
 from pyrep.objects import ProximitySensor, Shape, Dummy
 from rlbench.backend.conditions import DetectedCondition
@@ -128,8 +128,6 @@ class ReachSingleMovingTargetOnTheTable(Task):
         self.register_success_conditions([
             DetectedCondition(self.robot.arm.get_tip(), self.success_sensor)
         ])
-        self.register_waypoint_ability_start(0, self._move_above_object)
-        self.register_waypoints_should_repeat(self._repeat)
         return
 
     def init_episode(self, index: int) -> List[str]:
@@ -180,29 +178,7 @@ class ReachSingleMovingTargetOnTheTable(Task):
         # Called during at the end of each episode. Remove this if not using.
         pass
 
-    def _move_above_object(self, waypoint):
-        # compensate for grasping delay
-        tip_cur_position = self.robot.arm.get_tip().get_position()
-        tip_tar_position = self.target.get_position()
-        simulation_timestep = self.pyrep.get_simulation_timestep()
-        t_delay = compute_delay(
-            tip_cur_position,
-            tip_tar_position,
-        )
-        # t_delay = 0
-        target_state_dict = self.target_state_list[-1]
-        new_wp_position = compute_target_position(
-            t = self.t+t_delay,
-            t0=self.t,
-            x0=tip_tar_position,
-            v0=target_state_dict["v"],
-            a0=target_state_dict["a"],
-            dt = simulation_timestep,
-        )
-        way_obj = waypoint.get_waypoint_object()
-        way_obj.set_position(new_wp_position)
-        return
-    
+
     def _repeat(self):
         return True
 

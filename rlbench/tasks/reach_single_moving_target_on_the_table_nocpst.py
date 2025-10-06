@@ -2,7 +2,7 @@ import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
@@ -127,8 +127,6 @@ class ReachSingleMovingTargetOnTheTableNocpst(Task):
             self.success_sensor,
         )
         self.register_success_conditions([self.condition])
-        self.register_waypoint_ability_start(0, self._move_above_object)
-        self.register_waypoints_should_repeat(self._repeat)
         self.var2target_state_list = {}
         for var_index in range(self.variation_count()):
             self.var2target_state_list[var_index] = []

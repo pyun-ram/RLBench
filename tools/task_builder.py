@@ -152,7 +152,11 @@ class LoadedTask(object):
 
     def new_demo(self):
         try:
-            self.scene.get_demo(False, randomly_place=False)
+            task_name = self.task.get_name()
+            if task_name in ['pick_moving_target_on_the_table']:
+                self.scene.get_demo_with_expert(False, randomly_place=False)
+            else:
+                self.scene.get_demo(False, randomly_place=False)
         except (WaypointError, NoWaypointsError, DemoError, Exception) as e:
             traceback.print_exc()
         success, terminate = self.task.success()

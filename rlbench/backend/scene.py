@@ -335,8 +335,9 @@ class Scene(object):
 
         waypoints = self.task.get_waypoints()
         if len(waypoints) == 0:
-            raise NoWaypointsError(
-                'No waypoints were found.', self.task)
+            print('No waypoints were found.')
+            # raise NoWaypointsError(
+            #     'No waypoints were found.', self.task)
 
         demo = []
         if record:
@@ -444,6 +445,34 @@ class Scene(object):
                     break
 
         success, term = self.task.success()
+        if not success:
+            raise DemoError('Demo was completed, but was not successful.',
+                            self.task)
+        return Demo(demo)
+    
+    def get_demo_with_expert(self, record: bool = True,
+                 callable_each_step: Callable[[Observation], None] = None,
+                 randomly_place: bool = True, max_steps: int = 400) -> Demo:
+        if not self._has_init_task:
+            self.init_task()
+        if not self._has_init_episode:
+            self.init_episode(self._variation_index,
+                              randomly_place=randomly_place)
+        self._has_init_episode = False
+        demo = []
+        if record:
+            self.pyrep.step()  # Need this here or get_force doesn't work...
+            demo.append(self.get_observation())
+            if callable_each_step is not None:
+                callable_each_step(self.get_observation())
+        for _ in range(max_steps):
+            success = False
+            self._ignore_collisions_for_current_waypoint = False
+            self.step()
+            self._demo_record_step(demo, record, callable_each_step)
+            success, term = self.task.success()
+            if success:
+                break
         if not success:
             raise DemoError('Demo was completed, but was not successful.',
                             self.task)

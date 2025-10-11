@@ -341,6 +341,8 @@ class Scene(object):
         if record:
             self.pyrep.step()  # Need this here or get_force doesn't work...
             demo.append(self.get_observation())
+            if callable_each_step is not None:
+                callable_each_step(self.get_observation())
         while True:
             success = False
             self._ignore_collisions_for_current_waypoint = False

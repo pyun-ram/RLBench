@@ -154,7 +154,7 @@ class LoadedTask(object):
         try:
             task_name = self.task.get_name()
             if task_name in ['pick_moving_target_on_the_table',
-                'place_cups_on_rotating_frame', 'remove_cups_from_rotating_frame']:
+                'place_cups_on_rotating_frame', 'remove_cups_from_rotating_frame', 'put_rubbish_in_moving_bin']:
                 self.scene.get_demo_with_expert(False, randomly_place=False)
             else:
                 self.scene.get_demo(False, randomly_place=False)

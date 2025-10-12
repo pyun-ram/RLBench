@@ -65,7 +65,7 @@ class Environment(object):
                 'If domain randomization is enabled, must supply either '
                 'visual_randomization_config or dynamics_randomization_config')
 
-        self._check_dataset_structure()
+        # self._check_dataset_structure()
         self._pyrep = None
         self._robot = None
         self._scene = None

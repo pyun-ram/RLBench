@@ -8,7 +8,31 @@ from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from pyrep.objects import ProximitySensor, Shape, Dummy
 
-
+def compute_target_position(
+    t: float,
+    x0: List[float],
+    v0: List[float],
+    a0: List[float],
+    t0: float,
+    dt: float = None,
+) -> List[float]:
+    '''
+    Args:
+        t: float, current time
+        x0: List[float], initial position (x,y,z)
+        v0: List[float], initial velocity (vx, vy, vz)
+        a0: List[float], initial acceleration (ax, ay, az)
+        t0: float, initial time
+    Return:
+        List[float], target position (x,y,z)
+    '''
+    t_rel = t - t0
+    x0 = np.array(x0)
+    v0 = np.array(v0)
+    a0 = np.array(a0)
+    pos = x0 + v0 * t_rel + 0.5 * a0 * t_rel**2
+    return pos.tolist()
+    
 def get_state_config(var_index: int) -> bool:
     if var_index == 0:
         bool_a = False
@@ -172,32 +196,6 @@ class ReachSingleMovingTargetOnTheTable(Task):
                 "reach single uniform-speed ball on the table"
             ]
 
-    def compute_target_position(
-        self,
-        t: float,
-        x0: List[float],
-        v0: List[float],
-        a0: List[float],
-        t0: float,
-        dt: float = None,
-    ) -> List[float]:
-        '''
-        Args:
-            t: float, current time
-            x0: List[float], initial position (x,y,z)
-            v0: List[float], initial velocity (vx, vy, vz)
-            a0: List[float], initial acceleration (ax, ay, az)
-            t0: float, initial time
-        Return:
-            List[float], target position (x,y,z)
-        '''
-        t_rel = t - t0
-        x0 = np.array(x0)
-        v0 = np.array(v0)
-        a0 = np.array(a0)
-        pos = x0 + v0 * t_rel + 0.5 * a0 * t_rel**2
-        return pos.tolist()
-
     def variation_count(self) -> int:
         return 2
 
@@ -206,7 +204,7 @@ class ReachSingleMovingTargetOnTheTable(Task):
         simulation_timestep = self.pyrep.get_simulation_timestep()
         self.t += simulation_timestep
         target_state_dict = self.target_state_list[-1]
-        target_position = self.compute_target_position(
+        target_position = compute_target_position(
             t=self.t,
             t0=target_state_dict["t0"],
             x0=target_state_dict["x"],

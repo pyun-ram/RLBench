@@ -86,7 +86,9 @@ class PlaceCupsOnRotatingFrame(Task):
         self.register_waypoint_ability_start(
             0, self._move_above_next_target)
         self.register_waypoints_should_repeat(self._repeat)
-        self._step_id = 0
+        self.step_id = 0
+        self.t = 0
+        self.target_state_list = []
         self.yaw_speed = init_target_state(
             min_yaw=2.5, # 5 degree/s
             max_yaw=7.5, # 15 degree/s
@@ -367,3 +369,13 @@ class PlaceCupsOnRotatingFrame(Task):
 
     def base_rotation_bounds(self) -> Tuple[List[float], List[float]]:
         return [0.0, 0.0, -np.pi / 2], [0.0, 0.0, np.pi / 2]
+
+    def cleanup(self) -> None:
+        self.step_id = 0
+        self.t = 0
+        self.target_state_list = []
+        self._cups_placed = 0
+        self._index = 0
+        self.stage = 'wp0'
+        self.yaw_speed = None
+        return

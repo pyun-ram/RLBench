@@ -32,7 +32,6 @@ class PickMovingTargetOnTheTable(Task):
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
         self.t_max = 20 # (s)
-        self.step_id = 0
         self.t = 0
         self.target_state_list = []
 

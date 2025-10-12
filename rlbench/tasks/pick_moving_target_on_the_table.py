@@ -55,7 +55,7 @@ class PickMovingTargetOnTheTable(Task):
         for block in [self.target_block] + self.distractors:
             self.boundary.sample(block, min_distance=0.1)
 
-        var_index = index
+        var_index = 0
         bool_a = get_state_config(var_index)
         x, v, a = init_target_state(
             self.area,

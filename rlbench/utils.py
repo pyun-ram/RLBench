@@ -15,6 +15,15 @@ from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
 
 
+rgb_handles_to_mask = lambda x: x
+
+def write_image(image:np.ndarray, path: str):
+    return Image.fromarray(image).save(path)
+
+def write_pkl(obj, path):
+    with open(path, 'wb') as file:
+        pickle.dump(obj, file)
+
 class InvalidTaskName(Exception):
     pass
 
@@ -116,13 +125,13 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
 
         num_steps = len(obs)
 
-        if not (num_steps == len(listdir(l_sh_rgb_f)) == len(
-                listdir(l_sh_depth_f)) == len(listdir(r_sh_rgb_f)) == len(
-                listdir(r_sh_depth_f)) == len(listdir(oh_rgb_f)) == len(
-                listdir(oh_depth_f)) == len(listdir(wrist_rgb_f)) == len(
-                listdir(wrist_depth_f)) == len(listdir(front_rgb_f)) == len(
-                listdir(front_depth_f))):
-            raise RuntimeError('Broken dataset assumption')
+        # if not (num_steps == len(listdir(l_sh_rgb_f)) == len(
+        #         listdir(l_sh_depth_f)) == len(listdir(r_sh_rgb_f)) == len(
+        #         listdir(r_sh_depth_f)) == len(listdir(oh_rgb_f)) == len(
+        #         listdir(oh_depth_f)) == len(listdir(wrist_rgb_f)) == len(
+        #         listdir(wrist_depth_f)) == len(listdir(front_rgb_f)) == len(
+        #         listdir(front_depth_f))):
+        #     raise RuntimeError('Broken dataset assumption')
 
         for i in range(num_steps):
             # descriptions

@@ -1,5 +1,7 @@
 import numpy as np
-
+from rlbench.backend.exceptions import InvalidActionError
+from pyrep.errors import ConfigurationPathError
+from pyrep.const import ConfigurationPathAlgorithms as Algos
 from tqdm import tqdm
 from pathlib import Path
 from typing import List, Tuple
@@ -7,6 +9,7 @@ from typing import List, Tuple
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from pyrep.objects import ProximitySensor, Shape, Dummy
+import torch
 
 def compute_target_position(
     t: float,
@@ -32,7 +35,55 @@ def compute_target_position(
     a0 = np.array(a0)
     pos = x0 + v0 * t_rel + 0.5 * a0 * t_rel**2
     return pos.tolist()
-    
+
+def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
+    # compensate for grasping delay
+    tar_position = task.target.get_position()
+    tip_cur_pose = task.robot.arm.get_tip().get_pose()
+    tip_cur_position = tip_cur_pose[:3]
+    dist_tip_tar = np.linalg.norm(tip_cur_position - tar_position)
+    simulation_timestep = task.pyrep.get_simulation_timestep()
+    target_state_dict = task.target_state_list[-1]
+    if dist_tip_tar >= th_grasp:
+        stage = 'reach'
+        wp_position = tar_position
+    else:
+        stage = 'grasp'
+        wp_position = compute_target_position(
+            t = task.t+t_delay,
+            t0=task.t,
+            x0=tar_position,
+            v0=target_state_dict["v"],
+            a0=target_state_dict["a"],
+            dt = simulation_timestep,
+        )
+    eepose = np.ones((7))
+    eepose[:7] = tip_cur_pose
+    eepose[:3] = wp_position
+    eepose[3:7] = np.array([0, 1, 0, 0])
+    open = 1
+    path = task.get_path(eepose)
+    task.stage = stage
+    output = np.ones((1,1,8))
+    output[0,0,:7] = eepose
+    output[0,0,7:] = open
+    expert_info = {
+        "trajectory": torch.from_numpy(output),
+        "stage": stage,
+        "debug_info": {
+            "tip_cur_position": tip_cur_position,
+            "tar_position": tar_position,
+            "tip_cur_pose": tip_cur_pose,
+            "dist_tip_tar": dist_tip_tar,
+            "simulation_timestep": simulation_timestep,
+            "target_state_dict": target_state_dict,
+            "t": task.t,
+        }
+    }
+    if bool_return_path:
+        expert_info["path"] = path
+    return expert_info
+
 def get_state_config(var_index: int) -> bool:
     if var_index == 0:
         bool_a = False
@@ -173,6 +224,11 @@ class ReachSingleMovingTargetOnTheTable(Task):
                 "v": v,
                 "a": a,
             })
+        self._bool_expert = True
+        return
+    
+    def disable_expert_plan(self):
+        self._bool_expert = False
         return
 
     def init_episode(self, index: int) -> List[str]:
@@ -200,9 +256,7 @@ class ReachSingleMovingTargetOnTheTable(Task):
         return 2
 
     def step(self) -> None:
-        self.step_id += 1
         simulation_timestep = self.pyrep.get_simulation_timestep()
-        self.t += simulation_timestep
         target_state_dict = self.target_state_list[-1]
         target_position = compute_target_position(
             t=self.t,
@@ -213,6 +267,102 @@ class ReachSingleMovingTargetOnTheTable(Task):
             dt=simulation_timestep,
         )
         self.target.set_position(target_position)
+        if self._bool_expert:
+            if self.step_id % 10 == 0:
+                self._path, self._open = self.expert_plan()
+                self._path_done = False
+            if not self._path_done:
+                self._path_done = self._path.step()
+            if self._path_done:
+                self.move_gripper_tip([self._open])
+        self.step_id += 1
+        self.t += simulation_timestep
+        return
+
+    def expert_plan(self):
+        expert_info = get_expert_info(self, bool_return_path=True)
+        path = expert_info["path"]
+        open = expert_info["open"]
+        return path, open
+    
+
+    def get_path(self, action):
+        ignore_collisions = True
+        relative_to = None
+        try:
+            # try once with collision checking (if ignore_collisions is true)
+            try:
+                path = self.robot.arm.get_path(
+                    action[:3],
+                    quaternion=action[3:],
+                    ignore_collisions=ignore_collisions,
+                    relative_to=relative_to,
+                    trials=100,
+                    max_configs=10,
+                    max_time_ms=10,
+                    trials_per_goal=5,
+                    algorithm=Algos.RRTConnect
+                )
+            except ConfigurationPathError as e:
+                if ignore_collisions:
+                    raise InvalidActionError(
+                        'A path could not be found. Most likely due to the target '
+                        'being inaccessible or a collison was detected.') from e
+                else:
+                    # try once more with collision checking disabled
+                    path = self.robot.arm.get_path(
+                        action[:3],
+                        quaternion=action[3:],
+                        ignore_collisions=True,
+                        relative_to=relative_to,
+                        trials=100,
+                        max_configs=10,
+                        max_time_ms=10,
+                        trials_per_goal=5,
+                        algorithm=Algos.RRTConnect
+                    )
+        except ConfigurationPathError as e:
+            raise InvalidActionError(
+                'A path could not be found. Most likely due to the target '
+                'being inaccessible or a collison was detected.') from e
+        # path = modify_path(path)
+        return path
+
+    def move_gripper_tip(self, action):
+        def _actuate(action):
+            done = False
+            while not done:
+                done = self.robot.gripper.actuate(action, velocity=0.2)
+                self.pyrep.step()
+                # scene.task.step()
+            return
+        if 0.0 > action[0] > 1.0:
+            raise InvalidActionError(
+                'Gripper action expected to be within 0 and 1.')
+        open_condition = all(
+            x > 0.9 for x in self.robot.gripper.get_open_amount())
+        current_ee = 1.0 if open_condition else 0.0
+        action = float(action[0] > 0.5)
+
+        if current_ee != action:
+            detach_before_open = True
+            attach_grasped_objects = True
+            if not detach_before_open:
+                _actuate(action)
+            if action == 0.0 and attach_grasped_objects:
+                # If gripper close action, the check for grasp.
+                for g_obj in self.get_graspable_objects():
+                    self.robot.gripper.grasp(g_obj)
+            else:
+                # If gripper open action, the check for un-grasp.
+                self.robot.gripper.release()
+            if detach_before_open:
+                _actuate(action)
+            if action == 1.0:
+                # Step a few more times to allow objects to drop
+                for _ in range(10):
+                    self.pyrep.step()
+                    # scene.task.step()
         return
 
     def cleanup(self) -> None:

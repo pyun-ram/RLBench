@@ -9,7 +9,109 @@ from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError
 from pyrep.objects.dummy import Dummy
+import torch
+from copy import deepcopy
 
+def get_expert_info(task, bool_return_path=True):
+    tip_pose = task.robot.arm.get_tip().get_pose()
+    stage = task.stage
+    wp0_pose = deepcopy(task.wp0_init_pose)
+    wp1_pose = deepcopy(task.wp1_init_pose)
+    wp2_pose = deepcopy(task.wp2_init_pose)
+    wp3_pose = deepcopy(task.wp3.get_pose())
+
+    dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
+    dist_to_wp1 = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])
+    dist_to_wp2 = np.linalg.norm(tip_pose[:3] - wp2_pose[:3])
+    dist_to_wp3 = np.linalg.norm(tip_pose[:3] - wp3_pose[:3])
+
+    th_wp0 = 0.1
+    th_wp1 = 0.05
+    th_wp2 = 0.05
+    th_wp3 = 0.05
+    is_grasping = len(task.robot.gripper.get_grasped_objects()) > 0
+    t = task.t
+    simulation_timestep = task.pyrep.get_simulation_timestep()
+    target_state_dict = task.target_state_list[-1]
+    print('---------------------------------')
+    print(f'step_id:{task.step_id} ')
+    print(f"stage: {stage}, dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}")
+    print(f"is_grasping: {is_grasping}")        
+    if stage == 'wp0' and dist_to_wp0 > th_wp0:
+        stage = 'wp0'
+        t_delay = 0.0
+        eepose = wp0_pose
+        open = 1
+    elif stage == 'wp0' and dist_to_wp0 <= th_wp0:
+        stage = 'wp1'
+        t_delay = 0
+        eepose = wp1_pose
+        open = 1
+    elif stage == 'wp1' and dist_to_wp1 > th_wp1:
+        stage = 'wp1'
+        t_delay = 0.0
+        eepose = wp1_pose
+        open = 1
+    elif stage == 'wp1' and dist_to_wp1 <= th_wp1 and not is_grasping:
+        stage = 'wp1'
+        t_delay = 0.0
+        eepose = wp1_pose
+        open = 0
+    elif stage == 'wp1' and is_grasping:
+        stage = 'wp2'
+        t_delay = 0.0
+        eepose = wp2_pose
+        open = 0
+    elif stage == 'wp2' and dist_to_wp2 > th_wp2:
+        stage = 'wp2'
+        t_delay = 0.0
+        eepose = wp2_pose
+        open = 0
+    elif stage == 'wp2' and dist_to_wp2 <= th_wp2:
+        stage = 'wp3'
+        t_delay = 0.0
+        eepose = wp3_pose
+        open = 0
+    elif stage  in ['wp2', 'wp3'] and dist_to_wp3 > th_wp3:
+        stage = 'wp3'
+        t_delay = 0.0
+        eepose = wp3_pose
+        open = 0
+    elif stage  == 'wp3' and dist_to_wp3 <= th_wp3:
+        stage = 'wp0'
+        t_delay = 0.5
+        wp3_pred_position = compute_target_position(
+            t = t+t_delay,
+            t0=target_state_dict["t0"],
+            x0=target_state_dict["x"],
+            v0=target_state_dict["v"],
+            a0=target_state_dict["a"],
+            dt=simulation_timestep,
+        )
+        eepose = wp3_pose.copy()
+        eepose[:2] = wp3_pred_position[:2]
+        open = 1
+    else:
+        print("Unrecognized stage: ", stage)
+        import pdb; pdb.set_trace()
+    print(f"stage: {stage}, eepose: {eepose}, open: {open}")
+    path = task.get_path(eepose)
+    task.stage = stage
+    output = np.ones((1,1,8))
+    output[0,0,:7] = eepose
+    output[0,0,7:] = open
+    expert_info = {
+        "trajectory": torch.from_numpy(output),
+        "stage": stage,
+        "debug_info": {
+            "tip_cur_position": tip_pose[:3],
+            "tar_position": task.bin.get_position(),
+            "t": task.t,
+        }
+    }
+    if bool_return_path:
+        expert_info["path"] = path
+    return expert_info
 class PutRubbishInMovingBin(Task):
 
     def init_task(self):
@@ -30,6 +132,32 @@ class PutRubbishInMovingBin(Task):
         self.t = 0
         self.target_state_list = []
         self.stage = 'wp0'
+        self._bool_expert = True
+        self.var2target_state_list = {}
+        for var_index in range(self.variation_count()):
+            self.var2target_state_list[var_index] = []
+            bool_a = get_state_config(var_index)
+            x, v, a = init_target_state(
+                t_max=self.t_max,
+                area=self.area,
+                x_range=self.area,
+                v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
+                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                x0=None,
+                v0=None,
+                a0=[0, 0, 0] if not bool_a else None,
+                dx=[0.05, 0.05, 0.05],
+                dv=[0.025, 0.025, 0.025],
+                da=[0.001, 0.001, 0.001],
+                min_velo_norm=0.03,
+                min_acc_norm=0.01 if bool_a else 0,
+            )
+            self.var2target_state_list[var_index].append({
+                "x": x,
+                "v": v,
+                "a": a,
+            })
+        return
 
     def init_episode(self, index: int) -> List[str]:
         tomato1 = Shape('tomato1')
@@ -45,27 +173,19 @@ class PutRubbishInMovingBin(Task):
             self.rubbish.set_position([x3, y3, z2])
             tomato1.set_position([x2, y2, z3])
 
-        var_index = 0
-        bool_a = get_state_config(var_index)
-        x, v, a = init_target_state(
-            self.area,
-            self.t_max,
-            x0=None,
-            v0=None,
-            a0=[0, 0, 0] if not bool_a else None,
-        )
-        print(v, np.linalg.norm(v))
-        # save target_state
+        if index > 0:
+            err_msg = "Error: Only variation0 is supported."
+            raise NotImplementedError(err_msg)
+        self.var_index = index
+        target_state = self.var2target_state_list[self.var_index][0]
+        self.cleanup()
         self.target_state_list.append({
-            "x": x,
-            "v": v,
-            "a": a,
+            "x": target_state['x'],
+            "v": target_state['v'],
+            "a": target_state['a'],
             "t0": 0,
         })
-        self.step_id = 0
-        self.t = 0
-        self.stage = 'wp0'
-        self.bin.set_position(x)
+        # self.bin.set_position(target_state['x'])
         self.wp0_init_pose = self.wp0.get_pose()
         self.wp1_init_pose = self.wp1.get_pose()
         self.wp2_init_pose = self.wp2.get_pose()
@@ -88,16 +208,20 @@ class PutRubbishInMovingBin(Task):
             dt=simulation_timestep,
         )
         self.bin.set_position(target_position)
-
-        if self.step_id % 10 == 0:
-            self._path, self._open = self.expert_plan()
-            self._path_done = False
-        if not self._path_done:
-            self._path_done = self._path.step()
-        if self._path_done:
-            self.move_gripper_tip([self._open])
+        if self._bool_expert:
+            if self.step_id % 10 == 0:
+                self._path, self._open = self.expert_plan()
+                self._path_done = False
+            if not self._path_done:
+                self._path_done = self._path.step()
+            if self._path_done:
+                self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep
+        return
+    
+    def disable_expert_plan(self):
+        self._bool_expert = False
         return
     
     def move_gripper_tip(self, action):
@@ -138,90 +262,9 @@ class PutRubbishInMovingBin(Task):
         return
 
     def expert_plan(self):
-        tip_pose = self.robot.arm.get_tip().get_pose()
-        stage = self.stage
-        wp0_pose = self.wp0_init_pose
-        wp1_pose = self.wp1_init_pose
-        wp2_pose = self.wp2_init_pose
-        wp3_pose = self.wp3.get_pose()
-
-        dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
-        dist_to_wp1 = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])
-        dist_to_wp2 = np.linalg.norm(tip_pose[:3] - wp2_pose[:3])
-        dist_to_wp3 = np.linalg.norm(tip_pose[:3] - wp3_pose[:3])
-
-        th_wp0 = 0.1
-        th_wp1 = 0.05
-        th_wp2 = 0.05
-        th_wp3 = 0.05
-        is_grasping = len(self.robot.gripper.get_grasped_objects()) > 0
-        t = self.t
-        simulation_timestep = self.pyrep.get_simulation_timestep()
-        target_state_dict = self.target_state_list[-1]
-        print('---------------------------------')
-        print(f'step_id:{self.step_id} ')
-        print(f"stage: {stage}, dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}")
-        print(f"is_grasping: {is_grasping}")        
-        if stage == 'wp0' and dist_to_wp0 > th_wp0:
-            stage = 'wp0'
-            t_delay = 0.0
-            eepose = wp0_pose
-            open = 1
-        elif stage == 'wp0' and dist_to_wp0 <= th_wp0:
-            stage = 'wp1'
-            t_delay = 0
-            eepose = wp1_pose
-            open = 1
-        elif stage == 'wp1' and dist_to_wp1 > th_wp1:
-            stage = 'wp1'
-            t_delay = 0.0
-            eepose = wp1_pose
-            open = 1
-        elif stage == 'wp1' and dist_to_wp1 <= th_wp1 and not is_grasping:
-            stage = 'wp1'
-            t_delay = 0.0
-            eepose = wp1_pose
-            open = 0
-        elif stage == 'wp1' and is_grasping:
-            stage = 'wp2'
-            t_delay = 0.0
-            eepose = wp2_pose
-            open = 0
-        elif stage == 'wp2' and dist_to_wp2 > th_wp2:
-            stage = 'wp2'
-            t_delay = 0.0
-            eepose = wp2_pose
-            open = 0
-        elif stage == 'wp2' and dist_to_wp2 <= th_wp2:
-            stage = 'wp3'
-            t_delay = 0.0
-            eepose = wp3_pose
-            open = 0
-        elif stage  in ['wp2', 'wp3'] and dist_to_wp3 > th_wp3:
-            stage = 'wp3'
-            t_delay = 0.0
-            eepose = wp3_pose
-            open = 0
-        elif stage  == 'wp3' and dist_to_wp3 <= th_wp3:
-            stage = 'wp0'
-            t_delay = 0.5
-            wp3_pred_position = compute_target_position(
-                t = t+t_delay,
-                t0=target_state_dict["t0"],
-                x0=target_state_dict["x"],
-                v0=target_state_dict["v"],
-                a0=target_state_dict["a"],
-                dt=simulation_timestep,
-            )
-            eepose = wp3_pose.copy()
-            eepose[:2] = wp3_pred_position[:2]
-            open = 1
-        else:
-            print("Unrecognized stage: ", stage)
-            import pdb; pdb.set_trace()
-        print(f"stage: {stage}, eepose: {eepose}, open: {open}")
-        path = self.get_path(eepose)
-        self.stage = stage
+        expert_info = get_expert_info(self, bool_return_path=True)
+        path = expert_info["path"]
+        open = expert_info["open"]
         return path, open
 
     def get_path(self, action):

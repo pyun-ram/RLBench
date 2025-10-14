@@ -36,7 +36,7 @@ def get_expert_info(task, bool_return_path=True):
     print('---------------------------------')
     print(f'step_id:{task.step_id} ')
     print(f"stage: {stage}, dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}")
-    print(f"is_grasping: {is_grasping}")        
+    print(f"is_grasping: {is_grasping}")
     if stage == 'wp0' and dist_to_wp0 > th_wp0:
         stage = 'wp0'
         t_delay = 0.0
@@ -78,7 +78,7 @@ def get_expert_info(task, bool_return_path=True):
         eepose = wp3_pose
         open = 0
     elif stage  == 'wp3' and dist_to_wp3 <= th_wp3:
-        stage = 'wp0'
+        stage = 'wp3'
         t_delay = 0.5
         wp3_pred_position = compute_target_position(
             t = t+t_delay,
@@ -185,7 +185,7 @@ class PutRubbishInMovingBin(Task):
             "a": target_state['a'],
             "t0": 0,
         })
-        # self.bin.set_position(target_state['x'])
+        self.bin.set_position(target_state['x'])
         self.wp0_init_pose = self.wp0.get_pose()
         self.wp1_init_pose = self.wp1.get_pose()
         self.wp2_init_pose = self.wp2.get_pose()
@@ -318,3 +318,10 @@ class PutRubbishInMovingBin(Task):
         self.t = 0
         self.stage = 'wp0'
         return
+
+    def is_static_workspace(self) -> bool:
+        """Specify if the task should'nt be randomly placed in the workspace.
+
+        :return: True if the task pose should not be sampled.
+        """
+        return True

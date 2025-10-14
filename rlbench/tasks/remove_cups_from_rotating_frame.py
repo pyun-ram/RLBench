@@ -3,7 +3,7 @@ from pyrep.objects.proximity_sensor import ProximitySensor
 from pyrep.objects.shape import Shape
 from pyrep.objects.dummy import Dummy
 from rlbench.backend.task import Task
-from rlbench.backend.conditions import DetectedCondition, NothingGrasped
+from rlbench.backend.conditions import DetectedCondition, NothingGrasped, OrConditions
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from pyrep.errors import ConfigurationPathError
 from rlbench.backend.exceptions import InvalidActionError
@@ -51,7 +51,7 @@ def get_expert_info(task, bool_return_path=True):
     stage = task.stage
     print('---------------------------------')
     print(task.step_id)
-    print(f"stage: {stage}, dist_to_wp0: {dist_to_wp0}, dist_to_wp1: {dist_to_wp1}, dist_to_wp2: {dist_to_wp2}, dist_to_wp3: {dist_to_wp3}, dist_to_wp4: {dist_to_wp4}, dist_to_wp5: {dist_to_wp5}")
+    print(f"stage: {stage}, dist_to_wp0: {dist_to_wp0}, dist_to_wp1: {dist_to_wp1}, dist_to_wp2: {dist_to_wp2}, dist_to_wp3: {dist_to_wp3}, dist_to_wp4: {dist_to_wp4}, dist_to_wp5: {dist_to_wp5}, is_grasping: {is_grasping}")
     if stage == 'wp0' and dist_to_wp0 > th_w0:
         stage = 'wp0'
         t_delay = 0.0
@@ -131,11 +131,16 @@ def get_expert_info(task, bool_return_path=True):
         stage = 'wp5'
         t_delay = 0
         eepose = wp5_pose
-        open = 1
-    elif stage == 'wp5':
-        stage = 'wp0'
+        open = 0
+    elif stage == 'wp5' and dist_to_wp5 > th_w5:
+        stage = 'wp5'
         t_delay = 0
-        eepose = wp0_pose
+        eepose = wp5_pose
+        open = 0
+    elif stage == 'wp5' and dist_to_wp5 <= th_w5:
+        stage = 'wp5'
+        t_delay = 0
+        eepose = wp5_pose
         open = 1
         task.cups_removed += 1
     else:
@@ -143,8 +148,8 @@ def get_expert_info(task, bool_return_path=True):
         import pdb; pdb.set_trace()
     
     print(f"stage: {stage}, eepose: {eepose}, open: {open}")
+    print('---------------------------------')
     path = task.get_path(eepose)
-    task.stage = stage
     output = np.ones((1,1,8))
     output[0,0,:7] = eepose
     output[0,0,7:] = open
@@ -204,10 +209,16 @@ class RemoveCupsFromRotatingFrame(Task):
         self.w1.set_position(self.w1_rel_pos,
                              relative_to=self.cups[0],
                              reset_dynamics=False)
-        for i in range(self.cups_to_remove):
-            self.success_conditions.append(
-                DetectedCondition(self.cups[i], self.success_detectors[i])
-            )
+        # for i in range(self.cups_to_remove):
+        #     self.success_conditions.append(
+        #         DetectedCondition(self.cups[i], self.success_detectors[i])
+        #     )
+        success_detectors = [
+            ProximitySensor('success_detector%d' % i) for i in range(3)]
+        self._on_table_conditions = OrConditions([OrConditions([
+            DetectedCondition(self.cups[ci], success_detectors[sdi]) for sdi in
+            range(3)]) for ci in range(3)])
+        self.success_conditions.append(self._on_table_conditions)
         self.register_success_conditions(self.success_conditions)
         self.register_waypoint_ability_start(0, self._move_above_next_target)
         self.register_waypoints_should_repeat(self._repeat)
@@ -226,6 +237,10 @@ class RemoveCupsFromRotatingFrame(Task):
             "yaw_speed": self.yaw_speed,
             "t0": 0,
         })
+        init_joint_angles = np.array([
+        0.884812593460083, 0.5623087882995605, -0.86405348777771,
+        -1.9321348667144775,0.1937483549118042, 2.1352787017822266, 2.0415501594543457])
+        self.robot.arm.set_joint_positions(init_joint_angles, disable_dynamics=True)
         if self.cups_to_remove == 1:
             return ['remove 1 cup from the cup holder and place it on the '
                     'table',
@@ -254,6 +269,7 @@ class RemoveCupsFromRotatingFrame(Task):
                 self._path_done = self._path.step()
             if self._path_done:
                 self.move_gripper_tip([self._open])
+
         self.step_id += 1
         self.t += simulation_timestep
         return
@@ -266,6 +282,7 @@ class RemoveCupsFromRotatingFrame(Task):
         expert_info = get_expert_info(self, bool_return_path=True)
         path = expert_info["path"]
         open = expert_info["open"]
+        self.stage = expert_info["stage"]
         return path, open
     
     def move_gripper_tip(self, action):

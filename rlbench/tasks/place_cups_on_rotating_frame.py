@@ -149,7 +149,6 @@ def get_expert_info(task, bool_return_path=True):
         print("Unrecognized stage: ", stage)
         import pdb; pdb.set_trace()
     print(f"stage: {stage}, eepose: {eepose}, open: {open}")
-    path = task.get_path(eepose)
     output = np.ones((1,1,8))
     output[0,0,:7] = eepose
     output[0,0,7:] = open
@@ -166,6 +165,7 @@ def get_expert_info(task, bool_return_path=True):
         }
     }
     if bool_return_path:
+        path = task.get_path(eepose)
         expert_info["path"] = path
     return expert_info
 
@@ -389,7 +389,7 @@ class PlaceCupsOnRotatingFrame(Task):
         return path
 
     def variation_count(self) -> int:
-        return 3
+        return 1
 
     def _move_above_next_target(self, waypoint):
         self._w1.set_parent(self._cups[self._cups_placed])

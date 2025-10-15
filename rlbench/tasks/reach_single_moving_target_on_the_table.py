@@ -62,7 +62,6 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     eepose[:3] = wp_position
     eepose[3:7] = np.array([0, 1, 0, 0])
     open = 1
-    path = task.get_path(eepose)
     task.stage = stage
     output = np.ones((1,1,8))
     output[0,0,:7] = eepose
@@ -81,6 +80,7 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
         }
     }
     if bool_return_path:
+        path = task.get_path(eepose)
         expert_info["path"] = path
     return expert_info
 

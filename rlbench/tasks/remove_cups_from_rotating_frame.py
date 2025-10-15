@@ -149,7 +149,6 @@ def get_expert_info(task, bool_return_path=True):
     
     print(f"stage: {stage}, eepose: {eepose}, open: {open}")
     print('---------------------------------')
-    path = task.get_path(eepose)
     output = np.ones((1,1,8))
     output[0,0,:7] = eepose
     output[0,0,7:] = open
@@ -163,6 +162,7 @@ def get_expert_info(task, bool_return_path=True):
         }
     }
     if bool_return_path:
+        path = task.get_path(eepose)
         expert_info["path"] = path
     return expert_info
 class RemoveCupsFromRotatingFrame(Task):

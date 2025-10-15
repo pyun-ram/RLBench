@@ -260,6 +260,7 @@ class PickMovingTargetOnTheTable(Task):
         expert_info = get_expert_info(self, bool_return_path=True)
         path = expert_info["path"]
         open = expert_info["open"]
+        self.stage = expert_info["stage"]
         return path, open
 
     def get_path(self, action):

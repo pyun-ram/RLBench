@@ -10,6 +10,164 @@ from rlbench.backend.task import Task
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from pyrep.errors import ConfigurationPathError
 from rlbench.backend.exceptions import InvalidActionError
+import torch
+
+def get_expert_info(task, bool_return_path=True):
+    target_cup = task._cups[task._cups_placed]
+    # target_spoke = self._spokes[self._cups_placed]
+    tip_pose = task.robot.arm.get_tip().get_pose()
+    # find nearest spoke as target spoke
+    target_spoke = min(
+        task._spokes,
+        key=lambda spoke: np.linalg.norm(spoke.get_position() - tip_pose[:3]))
+    
+    task._w1.set_parent(target_cup)
+    task._w5.set_pose(
+        task._initial_relative_spoke,
+        relative_to=target_spoke)
+    task._w1.set_pose(
+        task._initial_relative_cup,
+        relative_to=target_cup)
+    
+    wp0_pose = task._w0.get_pose()
+    wp1_pose = task._w1.get_pose()
+    wp2_pose = task._w2.get_pose()
+    wp5_pose = task._w5.get_pose()
+    wp3_pose = task._w3.get_pose()
+    wp4_pose = task._w4.get_pose()
+    wp6_pose = task._w6.get_pose()
+    stage = task.stage
+    dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
+    dist_to_wp1 = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])
+    dist_to_wp2 = np.linalg.norm(tip_pose[:3] - wp2_pose[:3])
+    dist_to_wp3 = np.linalg.norm(tip_pose[:3] - wp3_pose[:3])
+    dist_to_wp4 = np.linalg.norm(tip_pose[:3] - wp4_pose[:3])
+    dist_to_wp5 = np.linalg.norm(tip_pose[:3] - wp5_pose[:3])
+    dist_to_wp6 = np.linalg.norm(tip_pose[:3] - wp6_pose[:3])
+    th_w0 = 0.1
+    th_w3 = 0.1
+    th_w4 = 0.02
+    th_w5= 0.03
+    is_grasping = len(task.robot.gripper.get_grasped_objects()) > 0
+    print('---------------------------------')
+    print(task.step_id)
+    print("stage: ", stage, "is_grasping: ", is_grasping)
+    print(f"dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}, dist_to_wp4: {dist_to_wp4:.2f}, dist_to_wp5: {dist_to_wp5:.2f}, dist_to_wp6: {dist_to_wp6:.2f}")
+    
+    if stage == 'wp0' and dist_to_wp0 > th_w0:
+        stage = 'wp0'
+        eepose = wp0_pose
+        open = 1
+    elif stage == 'wp0' and dist_to_wp0 <= th_w0:
+        stage = 'wp1'
+        t_delay = 0.0
+        eepose = wp1_pose
+        open = 1
+    elif stage == 'wp1' and not is_grasping:
+        stage = 'wp1'
+        t_delay = 0.0
+        eepose = wp1_pose
+        eepose[2] -= 0.02
+        open = 0
+    elif stage == 'wp1' and is_grasping:
+        stage = 'wp2'
+        t_delay = 0.0
+        eepose = wp2_pose
+        open = 0
+    elif stage == 'wp2':
+        stage = 'wp3'
+        t_delay = 0.0
+        eepose = wp3_pose
+        open = 0
+    elif stage == 'wp3' and dist_to_wp3 > th_w3:
+        stage = 'wp3'
+        t_delay = 0.0
+        eepose = wp3_pose
+        open = 0
+    elif stage == 'wp3' and dist_to_wp3 <= th_w3:
+        stage = 'wp4'
+        t_delay = 0.5
+        wp4_pose_pred = compute_target_pose(
+            task._frame_base,
+            task._w4,
+            t_delay,
+            yaw_speed=task.yaw_speed,
+        )
+        eepose = wp4_pose_pred
+        open = 0
+    elif stage == 'wp4' and dist_to_wp4 > th_w4:
+        stage = 'wp4'
+        t_delay = 0.5
+        wp4_pose_pred = compute_target_pose(
+            task._frame_base,
+            task._w4,
+            t_delay,
+            yaw_speed=task.yaw_speed,
+        )
+        eepose = wp4_pose_pred
+        open = 0
+    elif stage == 'wp4' and dist_to_wp4 <= th_w4:
+        stage = 'wp5'
+        t_delay = 0.5
+        wp5_pose_pred = compute_target_pose(
+            task._frame_base,
+            task._w5,
+            t_delay,
+            yaw_speed=task.yaw_speed,
+        )
+        eepose = wp5_pose_pred
+        open = 0
+    elif stage == 'wp5' and dist_to_wp5 > th_w5:
+        stage = 'wp5'
+        t_delay = 0.5
+        wp5_pose_pred = compute_target_pose(
+            task._frame_base,
+            task._w5,
+            t_delay,
+            yaw_speed=task.yaw_speed,
+        )
+        eepose = wp5_pose_pred
+        open = 0
+    elif stage == 'wp5' and dist_to_wp5 < th_w5 and is_grasping:
+        stage = 'wp5'
+        t_delay = 0.5
+        wp5_pose_pred = compute_target_pose(
+            task._frame_base,
+            task._w5,
+            t_delay,
+            yaw_speed=task.yaw_speed,
+        )
+        eepose = wp5_pose_pred
+        open = 1
+    elif stage == 'wp5' and dist_to_wp5 < th_w5 and not is_grasping:
+        stage = 'wp0'
+        t_delay = 0
+        eepose = wp0_pose
+        open = 1
+        task_cup_placed = task._cups_placed + 1
+    else:
+        print("Unrecognized stage: ", stage)
+        import pdb; pdb.set_trace()
+    print(f"stage: {stage}, eepose: {eepose}, open: {open}")
+    path = task.get_path(eepose)
+    output = np.ones((1,1,8))
+    output[0,0,:7] = eepose
+    output[0,0,7:] = open
+    expert_info = {
+        "trajectory": torch.from_numpy(output),
+        "stage": stage,
+        "task_cup_placed": task._cups_placed,
+        "open": open,
+        "eepose": eepose,
+        "debug_info": {
+            "tip_cur_position": tip_pose[:3],
+            "tar_position": target_cup.get_position(),
+            "t": task.t,
+        }
+    }
+    if bool_return_path:
+        expert_info["path"] = path
+    return expert_info
 
 def init_target_state(
     min_yaw: float,
@@ -73,7 +231,13 @@ class PlaceCupsOnRotatingFrame(Task):
         self._initial_relative_spoke = self._w5.get_pose(self._spokes[0])
         self.step_id = 0
         self.t = 0
+        self.stage = 'wp0'
         self.target_state_list = []
+        self._bool_expert = True
+        self.var2target_state_list = {}
+        self._frame_base = Shape('place_cups_holder_base')
+        for var_index in range(self.variation_count()):
+            self.var2target_state_list[var_index] = []
 
     def init_episode(self, index: int) -> List[str]:
         self._cups_placed = 0
@@ -119,19 +283,22 @@ class PlaceCupsOnRotatingFrame(Task):
 
     def step(self) -> None:
         simulation_timestep = self.pyrep.get_simulation_timestep()
-        self._frame_base = Shape('place_cups_holder_base')
         rot_speed = np.deg2rad(self.yaw_speed) * simulation_timestep
         self._frame_base.rotate([0, 0, rot_speed])
-
-        if self.step_id % 10 == 0:
-            self._path, self._open = self.expert_plan()
-            self._path_done = False
-        if not self._path_done:
-            self._path_done = self._path.step()
-        if self._path_done:
-            self.move_gripper_tip([self._open])
+        if self._bool_expert:
+            if self.step_id % 10 == 0:
+                self._path, self._open = self.expert_plan()
+                self._path_done = False
+            if not self._path_done:
+                self._path_done = self._path.step()
+            if self._path_done:
+                self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep
+        return
+
+    def disable_expert_plan(self):
+        self._bool_expert = False
         return
 
     def move_gripper_tip(self, action):
@@ -172,141 +339,11 @@ class PlaceCupsOnRotatingFrame(Task):
         return
 
     def expert_plan(self):
-        target_cup = self._cups[self._cups_placed]
-        # target_spoke = self._spokes[self._cups_placed]
-        tip_pose = self.robot.arm.get_tip().get_pose()
-        # find nearest spoke as target spoke
-        target_spoke = min(
-            self._spokes,
-            key=lambda spoke: np.linalg.norm(spoke.get_position() - tip_pose[:3]))
-        
-        self._w1.set_parent(target_cup)
-        self._w5.set_pose(
-            self._initial_relative_spoke,
-            relative_to=target_spoke)
-        self._w1.set_pose(
-            self._initial_relative_cup,
-            relative_to=target_cup)
-        
-        wp0_pose = self._w0.get_pose()
-        wp1_pose = self._w1.get_pose()
-        wp2_pose = self._w2.get_pose()
-        wp5_pose = self._w5.get_pose()
-        wp3_pose = self._w3.get_pose()
-        wp4_pose = self._w4.get_pose()
-        wp6_pose = self._w6.get_pose()
-        dist_to_target_cup = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])
-        dist_to_target_spoke = np.linalg.norm(tip_pose[:3] - wp5_pose[:3])
-        stage = self.stage
-        dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
-        dist_to_wp1 = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])
-        dist_to_wp2 = np.linalg.norm(tip_pose[:3] - wp2_pose[:3])
-        dist_to_wp3 = np.linalg.norm(tip_pose[:3] - wp3_pose[:3])
-        dist_to_wp4 = np.linalg.norm(tip_pose[:3] - wp4_pose[:3])
-        dist_to_wp5 = np.linalg.norm(tip_pose[:3] - wp5_pose[:3])
-        dist_to_wp6 = np.linalg.norm(tip_pose[:3] - wp6_pose[:3])
-        th_w0 = 0.1
-        th_w3 = 0.1
-        th_w4 = 0.02
-        th_w5= 0.03
-        is_grasping = len(self.robot.gripper.get_grasped_objects()) > 0
-        print('---------------------------------')
-        print(self.step_id)
-        print("stage: ", stage, "is_grasping: ", is_grasping)
-        print(f"dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}, dist_to_wp4: {dist_to_wp4:.2f}, dist_to_wp5: {dist_to_wp5:.2f}, dist_to_wp6: {dist_to_wp6:.2f}")
-        
-        if stage == 'wp0' and dist_to_wp0 > th_w0:
-            stage = 'wp0'
-            eepose = wp0_pose
-            open = 1
-        elif stage == 'wp0' and dist_to_wp0 <= th_w0:
-            stage = 'wp1'
-            t_delay = 0.0
-            eepose = wp1_pose
-            open = 1
-        elif stage == 'wp1' and not is_grasping:
-            stage = 'wp1'
-            t_delay = 0.0
-            eepose = wp1_pose
-            eepose[2] -= 0.02
-            open = 0
-        elif stage == 'wp1' and is_grasping:
-            stage = 'wp2'
-            t_delay = 0.0
-            eepose = wp2_pose
-            open = 0
-        elif stage == 'wp2':
-            stage = 'wp3'
-            t_delay = 0.0
-            eepose = wp3_pose
-            open = 0
-        elif stage == 'wp3' and dist_to_wp3 > th_w3:
-            stage = 'wp3'
-            t_delay = 0.0
-            eepose = wp3_pose
-            open = 0
-        elif stage == 'wp3' and dist_to_wp3 <= th_w3:
-            stage = 'wp4'
-            t_delay = 0.5
-            wp4_pose_pred = compute_target_pose(
-                self._frame_base,
-                self._w4,
-                t_delay,
-                yaw_speed=self.yaw_speed,
-            )
-            eepose = wp4_pose_pred
-            open = 0
-        elif stage == 'wp4' and dist_to_wp4 > th_w4:
-            stage = 'wp4'
-            t_delay = 0.5
-            wp4_pose_pred = compute_target_pose(
-                self._frame_base,
-                self._w4,
-                t_delay,
-                yaw_speed=self.yaw_speed,
-            )
-            eepose = wp4_pose_pred
-            open = 0
-        elif stage == 'wp4' and dist_to_wp4 <= th_w4:
-            stage = 'wp5'
-            t_delay = 0.5
-            wp5_pose_pred = compute_target_pose(
-                self._frame_base,
-                self._w5,
-                t_delay,
-                yaw_speed=self.yaw_speed,
-            )
-            eepose = wp5_pose_pred
-            open = 0
-        elif stage == 'wp5' and dist_to_wp5 > th_w5:
-            stage = 'wp5'
-            t_delay = 0.5
-            wp5_pose_pred = compute_target_pose(
-                self._frame_base,
-                self._w5,
-                t_delay,
-                yaw_speed=self.yaw_speed,
-            )
-            eepose = wp5_pose_pred
-            open = 0
-        elif stage == 'wp5' and dist_to_wp5 < th_w5:
-            stage = 'wp0'
-            t_delay = 0.5
-            wp5_pose_pred = compute_target_pose(
-                self._frame_base,
-                self._w5,
-                t_delay,
-                yaw_speed=self.yaw_speed,
-            )
-            eepose = wp5_pose_pred
-            open = 1
-            self._cups_placed += 1
-        else:
-            print("Unrecognized stage: ", stage)
-            import pdb; pdb.set_trace()
-        print(f"stage: {stage}, eepose: {eepose}, open: {open}")
-        path = self.get_path(eepose)
-        self.stage = stage
+        expert_info = get_expert_info(self, bool_return_path=True)
+        path = expert_info["path"]
+        open = expert_info["open"]
+        self.stage = expert_info["stage"]
+        self._cups_placed = expert_info["task_cup_placed"]
         return path, open
 
     def get_path(self, action):

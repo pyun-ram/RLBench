@@ -171,6 +171,7 @@ class PickMovingTargetOnTheTable(Task):
             raise NotImplementedError(err_msg)
         self.var_index = index
         target_state = self.var2target_state_list[self.var_index][0]
+        target_state["x"][-1] = self.target_block.get_position()[-1]
         self.cleanup()
         self.target_state_list.append({
             "x": target_state['x'],

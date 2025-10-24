@@ -201,6 +201,15 @@ class ReachSingleMovingTargetOnTheTable(Task):
         )
         self.register_success_conditions([self.condition])
         self.var2target_state_list = {}
+        self._bool_expert = True
+        return
+    
+    def disable_expert_plan(self):
+        self._bool_expert = False
+        return
+
+    def init_episode(self, index: int) -> List[str]:
+        self.var_index = index
         for var_index in range(self.variation_count()):
             self.var2target_state_list[var_index] = []
             bool_a = get_state_config(var_index)
@@ -224,15 +233,6 @@ class ReachSingleMovingTargetOnTheTable(Task):
                 "v": v,
                 "a": a,
             })
-        self._bool_expert = True
-        return
-    
-    def disable_expert_plan(self):
-        self._bool_expert = False
-        return
-
-    def init_episode(self, index: int) -> List[str]:
-        self.var_index = index
         target_state = self.var2target_state_list[self.var_index][0]
         # save target_state
         self.cleanup()

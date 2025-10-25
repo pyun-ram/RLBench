@@ -73,7 +73,8 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             # 构造eepose: position (z-0.02m) + rotation from target_pose; open = 0
             eepose = np.copy(target_pose)
             eepose[0:3] = predicted_position
-            eepose[2] -= 0.02  # z-0.02 m
+            # eepose[2] -= 0.02  # z-0.02 m
+            eepose[3:7] = tip_pose[3:7]
             open = 0
         elif stage == 'lift':
             # lift: 使用目标块的当前位置，保持夹爪关闭
@@ -119,7 +120,7 @@ class PickMovingTargetOnTheTable(Task):
         self.register_success_conditions([cond_set])
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 20 # (s)
+        self.t_max = 6.5 # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True

@@ -126,7 +126,7 @@ class PutRubbishInMovingBin(Task):
         self.wp3 = Dummy('waypoint3')
         self.step_id = 0
         self.area = [0, -0.5, 0.85, 0.2, 0.5, 0.85]
-        self.t_max = 20 # (s)
+        self.t_max = 6.5 # (s)
         self.step_id = 0
         self.t = 0
         self.target_state_list = []

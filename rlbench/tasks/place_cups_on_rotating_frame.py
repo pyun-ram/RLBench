@@ -237,7 +237,11 @@ class PlaceCupsOnRotatingFrame(Task):
         self.var2target_state_list = {}
         self._frame_base = Shape('place_cups_holder_base')
         for var_index in range(self.variation_count()):
-            self.var2target_state_list[var_index] = []
+            self.var2target_state_list[var_index] = [init_target_state(
+                min_yaw=2.5, # 5 degree/s
+                max_yaw=7.5, # 15 degree/s
+                d_yaw=1,
+            )]
 
     def init_episode(self, index: int) -> List[str]:
         self._cups_placed = 0
@@ -253,11 +257,7 @@ class PlaceCupsOnRotatingFrame(Task):
         self.step_id = 0
         self.t = 0
         self.target_state_list = []
-        self.yaw_speed = init_target_state(
-            min_yaw=2.5, # 5 degree/s
-            max_yaw=7.5, # 15 degree/s
-            d_yaw=1,
-        )
+        self.yaw_speed = self.var2target_state_list[index][0]
         self.target_state_list.append({
             "yaw_speed": self.yaw_speed,
             "t0": 0,

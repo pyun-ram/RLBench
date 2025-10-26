@@ -21,6 +21,11 @@ def get_expert_info(task, bool_return_path=True):
     target_spoke = min(
         task.spokes,
         key=lambda spoke: np.linalg.norm(spoke.get_position() - target_cup.get_position()))
+
+    # Save original parent of w1 and w5
+    org_w1_parent = task.w1.get_parent()
+    org_w2_parent = task.w2.get_parent()
+
     # self.w1.set_parent(target_cup)
     task.w1.set_position(task.w1_rel_pos, relative_to=target_cup, reset_dynamics=False)
     task.w1.set_orientation(task.w1_rel_ori, relative_to=target_cup, reset_dynamics=False)
@@ -164,6 +169,14 @@ def get_expert_info(task, bool_return_path=True):
     if bool_return_path:
         path = task.get_path(eepose)
         expert_info["path"] = path
+
+    # Restore original parent of w1 and w2
+    # self.w1.set_parent(target_cup)
+    task.w1.set_position(task.w1_rel_pos, relative_to=org_w1_parent, reset_dynamics=False)
+    task.w1.set_orientation(task.w1_rel_ori, relative_to=org_w1_parent, reset_dynamics=False)
+    # self.w2.set_parent(target_spoke)
+    task.w2.set_position(task.w2_rel_pos, relative_to=org_w2_parent, reset_dynamics=False)
+    task.w2.set_orientation(task.w2_rel_ori, relative_to=org_w2_parent, reset_dynamics=False)
     return expert_info
 class RemoveCupsFromRotatingFrame(Task):
 

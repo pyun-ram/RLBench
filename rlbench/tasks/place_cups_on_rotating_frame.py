@@ -20,7 +20,9 @@ def get_expert_info(task, bool_return_path=True):
     target_spoke = min(
         task._spokes,
         key=lambda spoke: np.linalg.norm(spoke.get_position() - tip_pose[:3]))
-    
+    # Save original parent of w1 and w5
+    org_w1_parent = task._w1.get_parent()
+    org_w5_parent = task._w5.get_parent()
     task._w1.set_parent(target_cup)
     task._w5.set_pose(
         task._initial_relative_spoke,
@@ -167,12 +169,20 @@ def get_expert_info(task, bool_return_path=True):
     if bool_return_path:
         path = task.get_path(eepose)
         expert_info["path"] = path
+    # Restore original parent of w1 and w5
+    task._w1.set_parent(org_w1_parent)
+    task._w5.set_pose(
+        task._initial_relative_spoke,
+        relative_to=org_w5_parent)
+    task._w1.set_pose(
+        task._initial_relative_cup,
+        relative_to=org_w1_parent)
     return expert_info
 
 def init_target_state(
     min_yaw: float,
     max_yaw: float,
-    d_yaw: float,
+    d_yaw: float = 1.0,
 ):
     '''
     Args:
@@ -186,8 +196,7 @@ def init_target_state(
         List[float], target state (x, v, a)
     '''
     yaw_range = [min_yaw, max_yaw]
-    dyaw = 1
-    yaws = np.arange(yaw_range[0], yaw_range[1] + dyaw/2, dyaw)
+    yaws = np.arange(yaw_range[0], yaw_range[1] + d_yaw/2, d_yaw)
     target_state = yaws
     idx = np.random.choice(target_state.shape[0])
     target_state = target_state[idx]

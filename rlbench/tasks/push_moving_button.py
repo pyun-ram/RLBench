@@ -78,6 +78,7 @@ def get_expert_info(task, bool_return_path=True):
         )
         eepose = wp1_pose.copy()
         eepose[:3] = wp_position
+        eepose[2] -= 0.01
     elif stage == 'wp1':
         stage = 'wp1'
         open = 0
@@ -92,6 +93,7 @@ def get_expert_info(task, bool_return_path=True):
         )
         eepose = wp1_pose.copy()
         eepose[:3] = wp_position
+        eepose[2] -= 0.01
     else:
         print("Unrecognized stage: ", stage)
         import pdb
@@ -108,6 +110,7 @@ def get_expert_info(task, bool_return_path=True):
         "open": open,
         "debug_info": {
             "tip_cur_position": tip_pose[:3],
+            "tar_position": task.target_button.get_position(),
             "t": task.t,
         }
     }
@@ -123,6 +126,7 @@ class PushMovingButton(Task):
         self.target_button = Shape('push_button_target')
         self.target_topPlate = Shape('target_button_topPlate')
         self.joint = Joint('target_button_joint')
+        self.joint.set_joint_position(-0.0026)
         self.target_wrap = Shape('target_button_wrap')
         self.goal_condition = JointCondition(self.joint, 0.003)
         self.step_id = 0
@@ -165,6 +169,7 @@ class PushMovingButton(Task):
 
     def init_episode(self, index: int) -> List[str]:
         self._variation_index = index
+        self.joint.set_joint_position(-0.0026)
         self.target_topPlate.set_color([1.0, 0.0, 0.0])
         self.target_wrap.set_color([1.0, 0.0, 0.0])
         self.variation_index = index
@@ -398,6 +403,7 @@ class PushMovingButton(Task):
         self.target_state_list = []
         self.step_id = 0
         self.t = 0
-        self.joint.set_joint_position(self.botton_init_position)
         self.stage = 'wp0'
+        self.joint.set_joint_position(self.botton_init_position)
+        [itm.reset() for itm in self._success_conditions]
         return

@@ -199,6 +199,9 @@ class PushMovingButton(Task):
                 'press the moving button with the %s base' % button_color_name,
                 'press the moving %s button' % button_color_name]
 
+    def is_static_workspace(self):
+        return True
+
     def step(self) -> None:
         simulation_timestep = self.pyrep.get_simulation_timestep()
         if self.goal_condition.condition_met() == (True, True):

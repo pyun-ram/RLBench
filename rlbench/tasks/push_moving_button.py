@@ -49,37 +49,25 @@ def get_expert_info(task, bool_return_path=True):
     wp1_init_pose = task.wp1_init_pose
     tip_pose = task.robot.arm.get_tip().get_pose()
     dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
-    th_pre_wp0 = 0.3  # m
-    th_wp0 = 0.05  # m
+    th_wp0 = 0.3  # m
     simulation_timestep = task.pyrep.get_simulation_timestep()
     target_state_dict = task.target_state_list[-1]
-
-    if dist_to_wp0 > th_pre_wp0:
-        stage = 'pre-wp0'
-        t_delay = 0.0  # s
-    elif dist_to_wp0 <= th_pre_wp0 and dist_to_wp0 > th_wp0:
+    stage = task.stage
+    is_open = all(x > 0.9 for x in task.robot.gripper.get_open_amount())
+    if stage == 'wp0' and dist_to_wp0 > th_wp0:
         stage = 'wp0'
-        t_delay = 0.5  # s
-    else:
-        stage = 'wp1'
-        t_delay = 0.5
-
-    if stage == 'pre-wp0':
+        open = 1
+        t_delay = 0.0
         eepose = wp0_pose
-        open = 0  # close
-    elif stage == 'wp0':
-        wp_position = compute_target_position(
-            t=task.t+t_delay,
-            t0=target_state_dict['t0'],
-            x0=wp0_init_pose[:3],
-            v0=target_state_dict["v"],
-            a0=target_state_dict["a"],
-            dt=simulation_timestep,
-        )
-        eepose = wp0_pose.copy()
-        eepose[:3] = wp_position
+    elif stage == 'wp0' and dist_to_wp0 <= th_wp0 and is_open:
+        stage = 'wp0'
         open = 0
-    elif stage == 'wp1':
+        t_delay = 0.0
+        eepose = tip_pose
+    elif stage == 'wp0' and dist_to_wp0 <= th_wp0 and not is_open:
+        stage = 'wp1'
+        open = 0
+        t_delay = 0.5
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],
@@ -90,7 +78,20 @@ def get_expert_info(task, bool_return_path=True):
         )
         eepose = wp1_pose.copy()
         eepose[:3] = wp_position
+    elif stage == 'wp1':
+        stage = 'wp1'
         open = 0
+        t_delay = 0.5
+        wp_position = compute_target_position(
+            t=task.t+t_delay,
+            t0=target_state_dict['t0'],
+            x0=wp1_init_pose[:3],
+            v0=target_state_dict["v"],
+            a0=target_state_dict["a"],
+            dt=simulation_timestep,
+        )
+        eepose = wp1_pose.copy()
+        eepose[:3] = wp_position
     else:
         print("Unrecognized stage: ", stage)
         import pdb
@@ -155,6 +156,7 @@ class PushMovingButton(Task):
                 "v": v,
                 "a": a,
             })
+            self.botton_init_position = self.joint.get_joint_position()
         return
 
     def disable_expert_plan(self):
@@ -396,4 +398,6 @@ class PushMovingButton(Task):
         self.target_state_list = []
         self.step_id = 0
         self.t = 0
+        self.joint.set_joint_position(self.botton_init_position)
+        self.stage = 'wp0'
         return

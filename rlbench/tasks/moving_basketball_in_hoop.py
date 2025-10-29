@@ -4,7 +4,7 @@ import numpy as np
 from pyrep.objects.object import Object
 from pyrep.objects.proximity_sensor import ProximitySensor
 from pyrep.objects.shape import Shape
-from rlbench.backend.conditions import DetectedCondition, NothingGrasped
+from rlbench.backend.conditions import DetectedCondition, NothingGrasped, Condition
 from rlbench.backend.task import Task
 from .reach_single_moving_target_on_the_table import get_state_config, init_target_state, compute_target_position
 from pyrep.const import ConfigurationPathAlgorithms as Algos
@@ -15,6 +15,15 @@ import numpy as np
 from pyrep.objects.dummy import Dummy
 from pyrep.backend import sim, utils
 
+class GripperOpenCondition(Condition):
+    def __init__(self, gripper):
+        """in radians if revoloute, or meters if prismatic"""
+        self._gripper = gripper
+
+    def condition_met(self):
+        is_open = all(x > 0.9 for x in self._gripper.get_open_amount())
+        met = is_open
+        return met, False
 
 def get_expert_info(task, bool_return_path=True):
     # reach -> pre-grasp -> grasp -> lift
@@ -42,6 +51,12 @@ def get_expert_info(task, bool_return_path=True):
     hoop_target_state_dict = task.target_state_list[-1][1]
     stage = task.stage
     is_open = all(x > 0.9 for x in task.robot.gripper.get_open_amount())
+    print('---------------------------------')
+    print(f'step_id:{task.step_id} ')
+    print(f"stage: {stage}, dist_to_w0: {dist_to_w0:.2f}, dist_to_w1: {dist_to_w1:.2f}, dist_to_w2: {dist_to_w2:.2f}, dist_to_w3: {dist_to_w3:.2f}")
+    print(f"is_open: {is_open}")
+    print(f"is_grasping: {len(task.robot.gripper.get_grasped_objects()) > 0}")
+    print(f"output:")
     if stage == 'wp0' and dist_to_w0 > th_w0:
         stage = 'wp0'
         t_delay = 0.0
@@ -150,7 +165,9 @@ class MovingBasketballInHoop(Task):
         self.register_graspable_objects([ball])
         self.register_success_conditions(
             [DetectedCondition(ball, ProximitySensor('success')),
-             NothingGrasped(self.robot.gripper)])
+             NothingGrasped(self.robot.gripper),
+             GripperOpenCondition(self.robot.gripper),
+             ])
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
         self.t_max = 6.5  # (s)

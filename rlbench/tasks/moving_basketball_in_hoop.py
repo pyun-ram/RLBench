@@ -4,7 +4,7 @@ import numpy as np
 from pyrep.objects.object import Object
 from pyrep.objects.proximity_sensor import ProximitySensor
 from pyrep.objects.shape import Shape
-from rlbench.backend.conditions import DetectedCondition
+from rlbench.backend.conditions import DetectedCondition, NothingGrasped
 from rlbench.backend.task import Task
 from .reach_single_moving_target_on_the_table import get_state_config, init_target_state, compute_target_position
 from pyrep.const import ConfigurationPathAlgorithms as Algos
@@ -87,25 +87,42 @@ def get_expert_info(task, bool_return_path=True):
         )
         open = 0
     elif stage == 'wp1' and not is_open:
-        stage = 'wp3'
+        stage = 'wp2'
         t_delay = 0.5
-        eepose = w3_pose
+        eepose = tip_pose
+        eepose[2] += 0.3
         open = 0
-    elif stage == 'wp3' and dist_to_w3 > th_w3:
+    elif stage == 'wp2' and dist_to_w3 > th_w3:
         stage = 'wp3'
         t_delay = 0.5
         eepose = w3_pose
+        eepose[:3] = compute_target_position(
+            t = task.t+t_delay,
+            t0=0,
+            x0=w3_init_pose[:3],
+            v0=hoop_target_state_dict["v"],
+            a0=hoop_target_state_dict["a"],
+            dt=simulation_timestep,
+        )
         open = 0
     elif stage == 'wp3' and dist_to_w3 <= th_w3:
         stage = 'wp3'
         t_delay = 0.5
         eepose = w3_pose
+        eepose[:3] = compute_target_position(
+            t = task.t+t_delay,
+            t0=0,
+            x0=w3_init_pose[:3],
+            v0=hoop_target_state_dict["v"],
+            a0=hoop_target_state_dict["a"],
+            dt=simulation_timestep,
+        )
         open = 1
     else:
         print("Unrecognized stage: ", stage)
         import pdb; pdb.set_trace()
     print(
-        f"stage: {stage}, eepose: {eepose}, open: {open}, dist_to_w0: {dist_to_w0}, dist_to_w1: {dist_to_w1}, dist_to_w2: {dist_to_w2}, dist_to_w3: {dist_to_w3}")
+        f"stage: {stage}, eepose: {eepose}, open: {open}, dist_to_w0: {dist_to_w0:.2f}, dist_to_w1: {dist_to_w1:.2f}, dist_to_w2: {dist_to_w2:.2f}, dist_to_w3: {dist_to_w3:.2f}")
     output = np.ones((1, 1, 8))
     output[0, 0, :7] = eepose
     output[0, 0, 3:7] = w1_init_pose[3:7]
@@ -132,7 +149,8 @@ class MovingBasketballInHoop(Task):
         hoop = Shape('basket_ball_hoop_respondable')
         self.register_graspable_objects([ball])
         self.register_success_conditions(
-            [DetectedCondition(ball, ProximitySensor('success'))])
+            [DetectedCondition(ball, ProximitySensor('success')),
+             NothingGrasped(self.robot.gripper)])
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
         self.t_max = 6.5  # (s)
@@ -188,6 +206,10 @@ class MovingBasketballInHoop(Task):
                 "v": v,
                 "a": a,
             })
+
+    def disable_expert_plan(self):
+        self._bool_expert = False
+        return
 
     def init_episode(self, index: int) -> List[str]:
         self.var_index = index

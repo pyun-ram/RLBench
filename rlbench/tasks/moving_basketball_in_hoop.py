@@ -178,6 +178,7 @@ class MovingBasketballInHoop(Task):
         self.stage = 'wp0'
         self.ball = ball
         self.hoop = hoop
+        self._has_been_picked = False
         for var_index in range(self.variation_count()):
             self.var2target_state_list[var_index] = []
             bool_a = get_state_config(var_index)
@@ -256,6 +257,7 @@ class MovingBasketballInHoop(Task):
         self.wp3 = Dummy('expertwp3')
         self.wp1_init_pose = self.wp1.get_pose()
         self.wp3_init_pose = self.wp3.get_pose()
+        self._has_been_picked = False
         return ['put the ball in the hoop',
                 'play basketball',
                 'shoot the ball through the net',
@@ -271,7 +273,7 @@ class MovingBasketballInHoop(Task):
         simulation_timestep = self.pyrep.get_simulation_timestep()
         ball_target_state_dict = self.target_state_list[-1][0]
         hoop_target_state_dict = self.target_state_list[-1][1]
-        if not self.check_grasp_success():
+        if not self.check_grasp_success() and not self._has_been_picked:
             ball_target_position = compute_target_position(
                 t=self.t,
                 t0=ball_target_state_dict["t0"],
@@ -281,6 +283,8 @@ class MovingBasketballInHoop(Task):
                 dt=simulation_timestep,
             )
             self.ball.set_position(ball_target_position)
+        else:
+            self._has_been_picked = True
         hoop_target_position = compute_target_position(
             t=self.t,
             t0=hoop_target_state_dict["t0"],
@@ -488,4 +492,5 @@ class MovingBasketballInHoop(Task):
         self.step_id = 0
         self.t = 0
         self.stage = 'wp0'
+        self._has_been_picked = False
         return

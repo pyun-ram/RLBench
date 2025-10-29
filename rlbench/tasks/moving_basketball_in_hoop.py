@@ -92,7 +92,7 @@ def get_expert_info(task, bool_return_path=True):
         eepose = tip_pose
         eepose[2] += 0.3
         open = 0
-    elif stage == 'wp2' and dist_to_w3 > th_w3:
+    elif stage in ['wp2', 'wp3'] and dist_to_w3 > th_w3:
         stage = 'wp3'
         t_delay = 0.5
         eepose = w3_pose

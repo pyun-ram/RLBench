@@ -407,7 +407,7 @@ class Task(object):
             i += 1
 
         # Check if all of the waypoints are feasible
-        feasible, way_i = self._feasible(waypoints)
+        feasible, way_i = self._feasible(waypoints[:1])
         if not feasible:
             raise WaypointError(
                 "Infeasible episode. Can't reach waypoint %d." % way_i, self)

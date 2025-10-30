@@ -291,6 +291,7 @@ class PlaceCupsOnRotatingFrame(Task):
     #     return []
 
     def step(self) -> None:
+        self.yaw_speed = self.target_state_list[-1]['yaw_speed']
         simulation_timestep = self.pyrep.get_simulation_timestep()
         rot_speed = np.deg2rad(self.yaw_speed) * simulation_timestep
         self._frame_base.rotate([0, 0, rot_speed])

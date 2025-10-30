@@ -101,7 +101,7 @@ def get_expert_info(task, bool_return_path=True):
         import pdb
         pdb.set_trace()
 
-    print(f"stage: {stage}, eepose: {eepose}, open: {open}")
+    print(f"stage: {stage}, eepose: {eepose}, open: {open}, dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}, dist_to_wp4: {dist_to_wp4:.2f}")
     print('---------------------------------')
     output = np.ones((1, 1, 8))
     output[0, 0, :7] = eepose
@@ -141,34 +141,55 @@ class InsertOntoRotatingPeg(Task):
         self.var2target_state_list = {}
         self._frame_base = Shape('square_base')
         for var_index in range(self.variation_count()):
-            self.var2target_state_list[var_index] = [init_target_state(
+            yaw_speed = init_target_state(
                 min_yaw=2.5,  # 5 degree/s
                 max_yaw=7.5,  # 15 degree/s
                 d_yaw=1,
-            )]
+            )
+            color_name, color_rgb = colors[var_index]
+            target_spoke = np.random.choice(['pillar0', 'pillar1', 'pillar2'])
+            color_choices = np.random.choice(
+                list(range(var_index)) + list(range(var_index + 1, len(colors))),
+                size=2, replace=False)
+            b = SpawnBoundary([Shape('boundary0')])
+            b.sample(self._square_ring)
+            self.var2target_state_list[var_index] = {
+                'yaw_speed': yaw_speed,
+                'color_name': color_name,
+                'color_rgb': color_rgb,
+                'target_spoke': target_spoke,
+                'color_choices': color_choices,
+                'ring_pose': self._square_ring.get_pose(),
+            }
+
         return
 
     def init_episode(self, index: int) -> List[str]:
-        color_name, color_rgb = colors[index]
+        # color_name, color_rgb = colors[index]
+        color_name = self.var2target_state_list[index]['color_name']
+        color_rgb = self.var2target_state_list[index]['color_rgb']
         spokes = [Shape('pillar0'), Shape('pillar1'), Shape('pillar2')]
-        chosen_pillar = np.random.choice(spokes)
+        # chosen_pillar = np.random.choice(spokes)
+        chosen_pillar = Shape(self.var2target_state_list[index]['target_spoke'])
         chosen_pillar.set_color(color_rgb)
         _, _, z = self._success_centre.get_position()
         x, y, _ = chosen_pillar.get_position()
         self._success_centre.set_position([x, y, z])
 
-        color_choices = np.random.choice(
-            list(range(index)) + list(range(index + 1, len(colors))),
-            size=2, replace=False)
+        # color_choices = np.random.choice(
+        #     list(range(index)) + list(range(index + 1, len(colors))),
+        #     size=2, replace=False)
+        color_choices = self.var2target_state_list[index]['color_choices']
         spokes.remove(chosen_pillar)
         for spoke, i in zip(spokes, color_choices):
             name, rgb = colors[i]
             spoke.set_color(rgb)
-        b = SpawnBoundary([Shape('boundary0')])
-        b.sample(self._square_ring)
+        self._square_ring.set_pose(self.var2target_state_list[index]['ring_pose'])
+        # b = SpawnBoundary([Shape('boundary0')])
+        # b.sample(self._square_ring)
         self.var_index = index
         self.cleanup()
-        self.yaw_speed = self.var2target_state_list[index][0]
+        self.yaw_speed = self.var2target_state_list[index]['yaw_speed']
         self.target_state_list.append({
             'yaw_speed': self.yaw_speed,
             't0': 0,
@@ -188,6 +209,7 @@ class InsertOntoRotatingPeg(Task):
                 'place the ring onto the %s spoke' % color_name]
 
     def step(self) -> None:
+        self.yaw_speed = self.target_state_list[-1]['yaw_speed']
         simulation_timestep = self.pyrep.get_simulation_timestep()
         rot_speed = np.deg2rad(self.yaw_speed) * simulation_timestep
         self._frame_base.rotate([0, 0, rot_speed])
@@ -303,3 +325,6 @@ class InsertOntoRotatingPeg(Task):
         self.target_state_list = []
         self.stage = 'wp0'
         return
+
+    def is_static_workspace(self):
+        return True

@@ -177,15 +177,19 @@ class BeatTheRotatingBuzz(Task):
         self._bool_expert = True
         self.var2target_state_list = {}
         self._frame_base = Shape('Cuboid')
+        frame_base_z = self._frame_base.get_position()[2]
         self.wand = wand
+        self.area = [0, -0.5, frame_base_z, 0.4, 0.5, frame_base_z]
         for var_index in range(self.variation_count()):
             yaw_speed = init_target_state(
                 min_yaw=2.5,  # 5 degree/s
                 max_yaw=7.5,  # 15 degree/s
                 d_yaw=1,
             )
+            frame_position = np.random.uniform(self.area[:3], self.area[3:])
             self.var2target_state_list[var_index] = {
                 'yaw_speed': yaw_speed,
+                'frame_position': frame_position,
             }
         return
 
@@ -197,6 +201,7 @@ class BeatTheRotatingBuzz(Task):
             'yaw_speed': self.yaw_speed,
             't0': 0,
         })
+        self._frame_base.set_position(self.var2target_state_list[index]['frame_position'])
         self.step_id = 0
         self.t = 0
         self.stage = 'wp0'
@@ -338,3 +343,6 @@ class BeatTheRotatingBuzz(Task):
 
     def variation_count(self) -> int:
         return 1
+
+    def is_static_workspace(self):
+        return True

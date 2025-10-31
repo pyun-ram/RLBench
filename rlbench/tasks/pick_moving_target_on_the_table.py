@@ -143,35 +143,40 @@ class PickMovingTargetOnTheTable(Task):
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,
             )
-            self.var2target_state_list[var_index].append({
+            color_choices = np.random.choice(
+            list(range(var_index)) + list(range(var_index + 1, len(colors))),
+            size=2, replace=False)
+            self.boundary.clear()
+            self.boundary.sample(
+                self.success_detector, min_rotation=(0.0, 0.0, 0.0),
+                max_rotation=(0.0, 0.0, 0.0))
+            for block in self.distractors:
+                self.boundary.sample(block, min_distance=0.1)
+            self.var2target_state_list[var_index] = {
                 "x": x,
-                "v": v,
+                "v": v,   
                 "a": a,
-            })
+                "color_choices": color_choices,
+                'success_detector_pose': self.success_detector.get_pose(),
+                'distractors_poses': [block.get_pose() for block in self.distractors],
+            }
         return
 
     def init_episode(self, index: int) -> List[str]:
         block_color_name, block_rgb = colors[index]
         self.target_block.set_color(block_rgb)
-        color_choices = np.random.choice(
-            list(range(index)) + list(range(index + 1, len(colors))),
-            size=2, replace=False)
+        color_choices = self.var2target_state_list[index]["color_choices"]
         for i, ob in enumerate(self.distractors):
             name, rgb = colors[color_choices[int(i)]]
             ob.set_color(rgb)
-
-        self.boundary.clear()
-        self.boundary.sample(
-            self.success_detector, min_rotation=(0.0, 0.0, 0.0),
-            max_rotation=(0.0, 0.0, 0.0))
-        for block in [self.target_block] + self.distractors:
-            self.boundary.sample(block, min_distance=0.1)
-
+        self.success_detector.set_pose(self.var2target_state_list[index]["success_detector_pose"])
+        for block in self.distractors:
+            block.set_pose(self.var2target_state_list[index]["distractors_poses"][i])
         if index > 0:
             err_msg = "Error: Only variation0 is supported."
             raise NotImplementedError(err_msg)
         self.var_index = index
-        target_state = self.var2target_state_list[self.var_index][0]
+        target_state = self.var2target_state_list[self.var_index]
         target_state["x"][-1] = self.target_block.get_position()[-1]
         self.cleanup()
         self.target_state_list.append({
@@ -315,3 +320,6 @@ class PickMovingTargetOnTheTable(Task):
         self.step_id = 0
         self.t = 0
         return
+
+    def is_static_workspace(self):
+        return True

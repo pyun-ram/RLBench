@@ -162,6 +162,8 @@ class LoadedTask(object):
                 'moving_basketball_in_hoop',
                 'insert_onto_rotating_peg',
                 'beat_the_rotating_buzz',
+                'close_moving_door',
+                'close_moving_box',
             ]:
                 self.scene.get_demo_with_expert(False, randomly_place=False)
             else:

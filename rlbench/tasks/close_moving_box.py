@@ -66,8 +66,8 @@ def get_expert_info(task, bool_return_path=True):
     dist_to_wp3 = np.linalg.norm(tip_pose[:3] - wp3_pose[:3])
     dist_to_wp4 = np.linalg.norm(tip_pose[:3] - wp4_pose[:3])
 
-    th_wp0 = 0.01
-    th_wp1 = 0.01
+    th_wp0 = 0.03
+    th_wp1 = 0.02
     th_wp3 = 0.02
     th_wp2_inter0 = 0.02 * 10
     th_wp2_inter0p1 = 0.02 * 10
@@ -76,7 +76,7 @@ def get_expert_info(task, bool_return_path=True):
     th_wp2_inter2p1 = 0.02 * 10
     th_wp2_inter2p2 = 0.02 * 10
     th_wp2_inter3 = 0.02
-    th_wp2_inter4 = 0.02
+    th_wp2_inter4 = 0.03
 
     is_open = any(x > 0.95 for x in task.robot.gripper.get_open_amount())
     print('---------------------')
@@ -118,9 +118,9 @@ def get_expert_info(task, bool_return_path=True):
         open = 0
         eepose = wp2_inter0_pose
     elif stage == 'wp2_inter0' and dist_to_wp2_inter0 <= th_wp2_inter0:
-        stage = 'wp2_inter0p1'
+        stage = 'wp2_inter1'
         open = 0
-        eepose = wp2_inter0p1_pose
+        eepose = wp2_inter1_pose
     elif stage == 'wp2_inter0p1' and dist_to_wp2_inter0p1 > th_wp2_inter0p1:
         stage = 'wp2_inter0p1'
         open = 0
@@ -142,9 +142,9 @@ def get_expert_info(task, bool_return_path=True):
         open = 0
         eepose = wp2_inter2_pose
     elif stage == 'wp2_inter2' and dist_to_wp2_inter2 <= th_wp2_inter2:
-        stage = 'wp2_inter2p1'
+        stage = 'wp2_inter2p2'
         open = 0
-        eepose = wp2_inter2p1_pose
+        eepose = wp2_inter2p2_pose
     elif stage == 'wp2_inter2p1' and dist_to_wp2_inter2p1 > th_wp2_inter2p1:
         stage = 'wp2_inter2p1'
         open = 0

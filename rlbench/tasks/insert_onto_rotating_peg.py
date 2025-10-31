@@ -231,7 +231,7 @@ class InsertOntoRotatingPeg(Task):
         return
 
     def variation_count(self) -> int:
-        return len(colors)
+        return len(colors[:3])
 
     def expert_plan(self):
         expert_info = get_expert_info(self, bool_return_path=True)

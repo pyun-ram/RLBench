@@ -494,3 +494,6 @@ class MovingBasketballInHoop(Task):
         self.stage = 'wp0'
         self._has_been_picked = False
         return
+
+    def is_static_workspace(self) -> bool:
+        return True

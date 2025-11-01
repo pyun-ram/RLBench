@@ -212,14 +212,24 @@ class RemoveCupsFromRotatingFrame(Task):
         self.var2target_state_list = {}
         self._frame_base = Shape('place_cups_holder_base')
         for var_index in range(self.variation_count()):
-            self.var2target_state_list[var_index] = [init_target_state(
-            min_yaw=2.5, # 5 degree/s
-            max_yaw=7.5, # 15 degree/s
-            d_yaw=1,
-        )]
+            yaw_speed = [init_target_state(
+                min_yaw=2.5, # 5 degree/s
+                max_yaw=7.5, # 15 degree/s
+                d_yaw=1,
+            )]
+            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=2)
+            frame_position = self._frame_base.get_position() + [frame_dx_dy[0], frame_dx_dy[1], 0]
+            self.var2target_state_list[var_index] = {
+                "yaw_speed": yaw_speed,
+                "frame_position": frame_position,
+            }
+            
         return
 
     def init_episode(self, index: int) -> List[str]:
+        self._frame_base.set_position(
+            self.var2target_state_list[index]['frame_position']
+        )
         self.cups_removed = -1
         self.cups_to_remove = 1 + index % MAX_CUPS_TO_REMOVE
         self.w5_new_pos = self.w5_new_pos_saved
@@ -245,7 +255,7 @@ class RemoveCupsFromRotatingFrame(Task):
             raise NotImplementedError(err_msg)
         self.var_index = index
         self.cleanup()
-        self.yaw_speed = self.var2target_state_list[index][0]
+        self.yaw_speed = self.var2target_state_list[index]['yaw_speed']
         self.target_state_list.append({
             "yaw_speed": self.yaw_speed,
             "t0": 0,
@@ -427,3 +437,6 @@ class RemoveCupsFromRotatingFrame(Task):
 
     def base_rotation_bounds(self) -> Tuple[List[float], List[float]]:
         return [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
+
+    def is_static_workspace(self):
+        return True

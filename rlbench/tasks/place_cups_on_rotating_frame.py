@@ -246,17 +246,31 @@ class PlaceCupsOnRotatingFrame(Task):
         self.var2target_state_list = {}
         self._frame_base = Shape('place_cups_holder_base')
         for var_index in range(self.variation_count()):
-            self.var2target_state_list[var_index] = [init_target_state(
+            yaw_speed = init_target_state(
                 min_yaw=2.5, # 5 degree/s
                 max_yaw=7.5, # 15 degree/s
                 d_yaw=1,
-            )]
+            )
+            b = SpawnBoundary([self._cups_boundary])
+            [b.sample(c, min_distance=0.10) for c in self._cups]
+            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=2)
+            frame_position = self._frame_base.get_position() + [frame_dx_dy[0], frame_dx_dy[1], 0]
+            self.var2target_state_list[var_index] = {
+                'yaw_speed': yaw_speed,
+                'cups_poses': [c.get_pose() for c in self._cups],
+                'frame_position': frame_position,
+            }
 
     def init_episode(self, index: int) -> List[str]:
         self._cups_placed = 0
         self._index = index
-        b = SpawnBoundary([self._cups_boundary])
-        [b.sample(c, min_distance=0.10) for c in self._cups]
+        # b = SpawnBoundary([self._cups_boundary])
+        # [b.sample(c, min_distance=0.10) for c in self._cups]
+        [f.set_pose(self.var2target_state_list[index]['cups_poses'][i])
+            for i, f in enumerate(self._cups)]
+        self._frame_base.set_position(
+            self.var2target_state_list[index]['frame_position']
+        )
         success_conditions = [NothingGrasped(self.robot.gripper)
                               ] + self._on_peg_conditions[:index + 1]
         self.register_success_conditions(success_conditions)
@@ -266,7 +280,7 @@ class PlaceCupsOnRotatingFrame(Task):
         self.step_id = 0
         self.t = 0
         self.target_state_list = []
-        self.yaw_speed = self.var2target_state_list[index][0]
+        self.yaw_speed = self.var2target_state_list[index]['yaw_speed']
         self.target_state_list.append({
             "yaw_speed": self.yaw_speed,
             "t0": 0,
@@ -426,3 +440,6 @@ class PlaceCupsOnRotatingFrame(Task):
         self.stage = 'wp0'
         self.yaw_speed = None
         return
+
+    def is_static_workspace(self):
+        return True

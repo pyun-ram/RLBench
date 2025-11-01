@@ -151,20 +151,52 @@ class InsertOntoRotatingPeg(Task):
             color_choices = np.random.choice(
                 list(range(var_index)) + list(range(var_index + 1, len(colors))),
                 size=2, replace=False)
-            b = SpawnBoundary([Shape('boundary0')])
-            b.sample(self._square_ring)
+            # b = SpawnBoundary([Shape('boundary0')])
+            # b.sample(self._square_ring)
+            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=(2,2))
+            ring_position = self._square_ring.get_position() + [frame_dx_dy[0][0], frame_dx_dy[0][1], 0]
+            frame_position = self._frame_base.get_position() + [frame_dx_dy[1][0], frame_dx_dy[1][1], 0]
             self.var2target_state_list[var_index] = {
                 'yaw_speed': yaw_speed,
                 'color_name': color_name,
                 'color_rgb': color_rgb,
                 'target_spoke': target_spoke,
                 'color_choices': color_choices,
-                'ring_pose': self._square_ring.get_pose(),
+                'ring_position': ring_position,
+                'frame_position': frame_position,
             }
 
         return
 
-    def init_episode(self, index: int) -> List[str]:
+    def init_episode(self, index: int, bool_random_place: bool = True) -> List[str]:
+        if bool_random_place:
+            for var_index in range(self.variation_count()):
+                yaw_speed = init_target_state(
+                    min_yaw=2.5,  # 5 degree/s
+                    max_yaw=7.5,  # 15 degree/s
+                    d_yaw=1,
+                )
+                color_name, color_rgb = colors[var_index]
+                target_spoke = np.random.choice(['pillar0', 'pillar1', 'pillar2'])
+                color_choices = np.random.choice(
+                    list(range(var_index)) + list(range(var_index + 1, len(colors))),
+                    size=2, replace=False)
+                # b = SpawnBoundary([Shape('boundary0')])
+                # b.sample(self._square_ring)
+                frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=(2,2))
+                ring_position = self._square_ring.get_position() + [frame_dx_dy[0][0], frame_dx_dy[0][1], 0]
+                frame_position = self._frame_base.get_position() + [frame_dx_dy[1][0], frame_dx_dy[1][1], 0]
+                self.var2target_state_list[var_index] = {
+                    'yaw_speed': yaw_speed,
+                    'color_name': color_name,
+                    'color_rgb': color_rgb,
+                    'target_spoke': target_spoke,
+                    'color_choices': color_choices,
+                    'ring_position': ring_position,
+                    'frame_position': frame_position,
+                }
+        self._square_ring.set_position(self.var2target_state_list[index]['ring_position'])
+        self._frame_base.set_position(self.var2target_state_list[index]['frame_position'])
         # color_name, color_rgb = colors[index]
         color_name = self.var2target_state_list[index]['color_name']
         color_rgb = self.var2target_state_list[index]['color_rgb']
@@ -184,7 +216,6 @@ class InsertOntoRotatingPeg(Task):
         for spoke, i in zip(spokes, color_choices):
             name, rgb = colors[i]
             spoke.set_color(rgb)
-        self._square_ring.set_pose(self.var2target_state_list[index]['ring_pose'])
         # b = SpawnBoundary([Shape('boundary0')])
         # b.sample(self._square_ring)
         self.var_index = index
@@ -203,6 +234,12 @@ class InsertOntoRotatingPeg(Task):
         self.w3 = Dummy('waypoint3')
         self.w4 = Dummy('waypoint4')
         self.w2_init_pose = self.w2.get_pose()
+
+        np.set_printoptions(precision=3, suppress=True)
+        print("frame_pose", self._frame_base.get_pose())
+        print("ring_pose", self._square_ring.get_pose())
+        print("yaw_speed", self.yaw_speed)
+        print("var2target_state_list", self.var2target_state_list)
 
         return ['put the ring on the %s spoke' % color_name,
                 'slide the ring onto the %s colored spoke' % color_name,

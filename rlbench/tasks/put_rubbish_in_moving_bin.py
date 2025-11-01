@@ -151,20 +151,34 @@ class PutRubbishInMovingBin(Task):
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,
             )
-            self.var2target_state_list[var_index].append({
+            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=(3,2))
+            tomato1 = Shape('tomato1')
+            tomato2 = Shape('tomato2')
+            tomato1_position = tomato1.get_position() + [frame_dx_dy[0][0], frame_dx_dy[0][1], 0]
+            tomato2_position = tomato2.get_position() + [frame_dx_dy[1][0], frame_dx_dy[1][1], 0]
+            rubbish_position = self.rubbish.get_position() + [frame_dx_dy[2][0], frame_dx_dy[2][1], 0]
+            positions = np.array([tomato1_position, tomato2_position, rubbish_position])
+            pos = np.random.randint(3)
+            self.var2target_state_list[var_index] = {
                 "x": x,
                 "v": v,
                 "a": a,
-            })
+                "positions": positions,
+                "pos": pos,
+            }
         return
 
     def init_episode(self, index: int) -> List[str]:
         tomato1 = Shape('tomato1')
         tomato2 = Shape('tomato2')
+        tomato1.set_position(self.var2target_state_list[index]['positions'][0])
+        tomato2.set_position(self.var2target_state_list[index]['positions'][1])
+        self.rubbish.set_position(self.var2target_state_list[index]['positions'][2])
         x1, y1, z1 = tomato2.get_position()
         x2, y2, z2 = self.rubbish.get_position()
         x3, y3, z3 = tomato1.get_position()
-        pos = np.random.randint(3)
+        pos = self.var2target_state_list[index]['pos']
+
         if pos == 0:
             self.rubbish.set_position([x1, y1, z2])
             tomato2.set_position([x2, y2, z1])
@@ -176,7 +190,7 @@ class PutRubbishInMovingBin(Task):
             err_msg = "Error: Only variation0 is supported."
             raise NotImplementedError(err_msg)
         self.var_index = index
-        target_state = self.var2target_state_list[self.var_index][0]
+        target_state = self.var2target_state_list[self.var_index]
         self.cleanup()
         self.target_state_list.append({
             "x": target_state['x'],

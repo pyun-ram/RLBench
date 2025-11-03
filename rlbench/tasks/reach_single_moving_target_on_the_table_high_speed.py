@@ -124,20 +124,21 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     target_state_dict = task.target_state_list[-1]
     stage = 'reach'
     wp_position = tar_position
-    wp_position[2] += 0.2
-    # if dist_tip_tar >= th_grasp:
-    #     stage = 'reach'
-    #     wp_position = tar_position
-    # else:
-    #     stage = 'grasp'
-    #     wp_position = compute_target_position(
-    #         t = task.t+t_delay,
-    #         t0=target_state_dict["t0"],
-    #         x0=target_state_dict["x"],
-    #         v0=target_state_dict["v"],
-    #         a0=target_state_dict["a"],
-    #         dt = simulation_timestep,
-    #     )
+    # wp_position[2] += 0.2
+    if dist_tip_tar >= th_grasp:
+        stage = 'reach'
+        wp_position = tar_position
+    else:
+        stage = 'grasp'
+        t_delay = 1.0
+        wp_position = compute_target_position(
+            t = task.t+t_delay,
+            t0=target_state_dict["t0"],
+            x0=target_state_dict["x"],
+            v0=target_state_dict["v"],
+            a0=target_state_dict["a"],
+            dt = simulation_timestep,
+        )
     eepose = np.ones((7))
     eepose[:7] = tip_cur_pose
     eepose[:3] = wp_position
@@ -162,7 +163,11 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
         }
     }
     if bool_return_path:
-        path = task.get_path(eepose)
+        try:
+            path = task.get_path(eepose)
+        except Exception as e:
+            print(f"Exception: {e}")
+            path = None
         expert_info["path"] = path
     return expert_info
 
@@ -378,19 +383,21 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
             self.target_state_list.append(target_state_dict)
 
         if self._bool_expert:
-            if self.step_id % 10 == 0:
+            if self.step_id % 4 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-                from matplotlib import pyplot as plt
-                figure = plt.figure()
-                figure.set_size_inches(10, 10)
-                subplot = figure.add_subplot(1, 1, 1)
-                subplot.plot(self.tip_speed_list)
-                subplot.set_title('tip speed vs step')
-                plt.savefig('tip_speed.png')
-                plt.close()
-            if not self._path_done:
-                self._path_done = self._path.step()
+                # from matplotlib import pyplot as plt
+                # figure = plt.figure()
+                # figure.set_size_inches(10, 10)
+                # subplot = figure.add_subplot(1, 1, 1)
+                # subplot.plot(self.tip_speed_list)
+                # subplot.set_title('tip speed vs step')
+                # plt.savefig('tip_speed.png')
+                # plt.close()
+                if self._path is not None:
+                    self.store_path_to_buffer(self._path, current_t=self.t, dt=simulation_timestep)
+            action, jts = self.get_action_from_buffer(self.t)
+            self._path_done = self.move_arm(jts, self._path)
             if self._path_done:
                 self.move_gripper_tip([self._open])
         self.step_id += 1

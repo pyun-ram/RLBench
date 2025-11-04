@@ -27,15 +27,19 @@ def cross_boundary(next_position: List[float], target: Shape, area: List[float])
             False, None: not cross boundary
     '''
     current_position = target.get_position()
+    cross_boundary_indices = []
+    bool_cross = False
     # cross x boundary
     if (current_position[0] >= area[0] and next_position[0] <= area[0]) or \
             (current_position[0] <= area[3] and next_position[0] >= area[3]):
-        return True, 0
+        bool_cross = True
+        cross_boundary_indices.append(0)
     # cross y boundary
     if (current_position[1] >= area[1] and next_position[1] <= area[1]) or \
             (current_position[1] <= area[4] and next_position[1] >= area[4]):
-        return True, 1
-    return False, None
+        bool_cross = True
+        cross_boundary_indices.append(1)
+    return bool_cross, cross_boundary_indices
 
 
 def get_action_traj(path) -> Tuple[np.ndarray, np.ndarray]:
@@ -341,11 +345,11 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         assert len(self.action_buffer) == 0, "Action buffer should be empty"
         if index == 1:
             return [
-                "reach single accelerated ball on the table"
+                "reach single accelerated ball on the table (high speed)"
             ]
         else:
             return [
-                "reach single uniform-speed ball on the table"
+                "reach single uniform-speed ball on the table (high speed)"
             ]
 
     def variation_count(self) -> int:
@@ -372,8 +376,8 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         else:
             self.target.set_position(target_position)
             new_target_velocity = deepcopy(target_velocity)
-            new_target_velocity[boundary_index] = - \
-                new_target_velocity[boundary_index]
+            for itm in boundary_index:
+                new_target_velocity[itm] = - new_target_velocity[itm]
             target_state_dict = {
                 "t0": self.t,
                 "x": target_position,
@@ -386,23 +390,9 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-                # from matplotlib import pyplot as plt
-                # figure = plt.figure()
-                # figure.set_size_inches(10, 10)
-                # subplot = figure.add_subplot(1, 1, 1)
-                # subplot.plot(self.tip_speed_list)
-                # subplot.set_title('tip speed vs step')
-                # plt.savefig('tip_speed.png')
-                # plt.close()
-                # if self._path is not None:
-                #     self.store_path_to_buffer(self._path, current_t=self.t, dt=simulation_timestep)
-            # action, jts = self.get_action_from_buffer(self.t)
-            # self._path_done = self.move_arm(jts, self._path)
-            if self._path is not None:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            else:
-                self._path_done = False
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep

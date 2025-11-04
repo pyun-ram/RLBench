@@ -157,6 +157,7 @@ class LoadedTask(object):
                 "reach_single_moving_target_on_the_table",
                 "reach_single_moving_target_on_the_table_high_speed",
                 'pick_moving_target_on_the_table',
+                'pick_moving_target_on_the_table_high_speed',
                 'place_cups_on_rotating_frame',
                 'remove_cups_from_rotating_frame',
                 'put_rubbish_in_moving_bin', 
@@ -264,10 +265,10 @@ class LoadedTask(object):
         handle = Dummy(self.task_file.replace('.py', ''))
         handle.set_name(name)
 
-        with open(old_file_path, 'r') as f:
+        with open(old_file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         content = content.replace(old_class_name, new_class_name)
-        with open(new_file_path, 'w') as f:
+        with open(new_file_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
         # Rename .ttt

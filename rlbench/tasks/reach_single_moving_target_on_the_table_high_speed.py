@@ -10,6 +10,8 @@ from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from pyrep.objects import ProximitySensor, Shape, Dummy
 import torch
+from copy import deepcopy
+
 
 def cross_boundary(next_position: List[float], target: Shape, area: List[float]) -> Tuple[bool, int]:
     '''
@@ -26,18 +28,15 @@ def cross_boundary(next_position: List[float], target: Shape, area: List[float])
     '''
     current_position = target.get_position()
     # cross x boundary
-    if (current_position[0] > area[0] and next_position[0] < area[0]) or \
-        (current_position[0] < area[3] and next_position[0] > area[3]):
+    if (current_position[0] >= area[0] and next_position[0] <= area[0]) or \
+            (current_position[0] <= area[3] and next_position[0] >= area[3]):
         return True, 0
     # cross y boundary
-    if (current_position[1] > area[1] and next_position[1] < area[1]) or \
-        (current_position[1] < area[4] and next_position[1] > area[4]):
+    if (current_position[1] >= area[1] and next_position[1] <= area[1]) or \
+            (current_position[1] <= area[4] and next_position[1] >= area[4]):
         return True, 1
-    # cross z boundary
-    if (current_position[2] > area[2] and next_position[2] < area[2]) or \
-        (current_position[2] < area[5] and next_position[2] > area[5]):
-        return True, 2
     return False, None
+
 
 def get_action_traj(path) -> Tuple[np.ndarray, np.ndarray]:
     '''
@@ -47,6 +46,7 @@ def get_action_traj(path) -> Tuple[np.ndarray, np.ndarray]:
         np.ndarray, shape: (N, 7)
     '''
     from pyrep.backend import sim, utils
+
     def _set_joints(path, positions):
         [sim.simSetJointPosition(jh, p)  # type: ignore
          for jh, p in zip(path._arm._joint_handles, positions)]
@@ -71,10 +71,10 @@ def get_action_traj(path) -> Tuple[np.ndarray, np.ndarray]:
         sim.simExtStep(True)  # Have to step for changes to take effect
     _set_joints(path, path._path_points[0: len(path._arm.joints)])
     for i in range(len(path._arm.joints), len(path._path_points),
-                    len(path._arm.joints)):
+                   len(path._arm.joints)):
         points = path._path_points[i:i + len(path._arm.joints)]
         _set_joints(path, points)
-        p = list(tip.get_pose()) # x,y,z,qx,qy,qz,qw
+        p = list(tip.get_pose())  # x,y,z,qx,qy,qz,qw
         action_traj.append(p)
         joint_traj.append(points)
     _set_joints(path, init_angles)
@@ -84,6 +84,7 @@ def get_action_traj(path) -> Tuple[np.ndarray, np.ndarray]:
     sim.simSetModelProperty(path._arm._handle, prior)
     path._arm.set_model(is_model)
     return np.array(action_traj), np.array(joint_traj)
+
 
 def compute_target_position(
     t: float,
@@ -114,6 +115,7 @@ def compute_target_position(
     else:
         return pos.tolist(), (v0 + a0 * t_rel).tolist()
 
+
 def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     # compensate for grasping delay
     tar_position = task.target.get_position()
@@ -124,7 +126,6 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     target_state_dict = task.target_state_list[-1]
     stage = 'reach'
     wp_position = tar_position
-    # wp_position[2] += 0.2
     if dist_tip_tar >= th_grasp:
         stage = 'reach'
         wp_position = tar_position
@@ -132,12 +133,12 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
         stage = 'grasp'
         t_delay = 1.0
         wp_position = compute_target_position(
-            t = task.t+t_delay,
+            t=task.t+t_delay,
             t0=target_state_dict["t0"],
             x0=target_state_dict["x"],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
-            dt = simulation_timestep,
+            dt=simulation_timestep,
         )
     eepose = np.ones((7))
     eepose[:7] = tip_cur_pose
@@ -145,9 +146,9 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     eepose[3:7] = np.array([0, 1, 0, 0])
     open = 1
     task.stage = stage
-    output = np.ones((1,1,8))
-    output[0,0,:7] = eepose
-    output[0,0,7:] = open
+    output = np.ones((1, 1, 8))
+    output[0, 0, :7] = eepose
+    output[0, 0, 7:] = open
     expert_info = {
         "trajectory": torch.from_numpy(output),
         "stage": stage,
@@ -171,6 +172,7 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
         expert_info["path"] = path
     return expert_info
 
+
 def get_state_config(var_index: int) -> bool:
     if var_index == 0:
         bool_a = False
@@ -179,6 +181,7 @@ def get_state_config(var_index: int) -> bool:
     else:
         raise ValueError("var_index must be 0, 1")
     return bool_a
+
 
 def init_target_state(
     t_max: float,
@@ -204,7 +207,7 @@ def init_target_state(
         a_range: List[float], [axmin,aymin,azmin,axmax,aymax,azmax] in Fworld
         dx: List[float], [dx,dy,dz]
         dv: List[float], [dvx,dvy,dvz]
-        da: List[float], [dvx,dvy,dvz]
+        da: List[float], [dax,day,daz]
         x0: List[float], initial position, 
         v0: List[float], initial velocity
         a0: List[float], initial acceleration
@@ -269,6 +272,7 @@ def init_target_state(
     target_state = target_state.tolist()
     return target_state[:3], target_state[3:6], target_state[6:9]
 
+
 class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
 
     def init_task(self) -> None:
@@ -290,7 +294,7 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         self.var2target_state_list = {}
         self._bool_expert = True
         return
-    
+
     def disable_expert_plan(self):
         self._bool_expert = False
         return
@@ -305,27 +309,21 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
                 area=self.area,
                 x_range=self.area,
                 v_range=[-1, -1, 0, 1, 1, 0],
-                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                a_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.025, 0.025, 0.025],
-                da=[0.001, 0.001, 0.001],
+                da=[0.2, 0.2, 0.2],
                 min_velo_norm=0.8,
-                min_acc_norm=0.01 if bool_a else 0,
+                min_acc_norm=0.1 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({
                 "x": x,
                 "v": v,
                 "a": a,
             })
-        # import pickle
-        # target_state_pkl = "./target_state.pkl"
-        # with open(target_state_pkl, 'wb') as f:
-        #     pickle.dump(self.var2target_state_list, f)
-        # with open(target_state_pkl, 'rb') as f:
-        #     self.var2target_state_list = pickle.load(f)
         target_state = self.var2target_state_list[self.var_index][0]
         # save target_state
         self.cleanup()
@@ -337,8 +335,8 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         })
         self.target.set_position(target_state["x"])
         self.tip_speed_list = []
-        self.joint_velocity_dict_list = {i:[] for i in range(7)}
-        self.joint_force_dict_list = {i:[] for i in range(7)}
+        self.joint_velocity_dict_list = {i: [] for i in range(7)}
+        self.joint_force_dict_list = {i: [] for i in range(7)}
         self.action_buffer = {}
         assert len(self.action_buffer) == 0, "Action buffer should be empty"
         if index == 1:
@@ -367,13 +365,15 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
             dt=simulation_timestep,
             bool_return_velocity=True,
         )
-        bool_cross, boundary_index = cross_boundary(target_position, self.target, self.area)
+        bool_cross, boundary_index = cross_boundary(
+            target_position, self.target, self.area)
         if not bool_cross:
             self.target.set_position(target_position)
         else:
-            from copy import deepcopy
+            self.target.set_position(target_position)
             new_target_velocity = deepcopy(target_velocity)
-            new_target_velocity[boundary_index] = -new_target_velocity[boundary_index]
+            new_target_velocity[boundary_index] = - \
+                new_target_velocity[boundary_index]
             target_state_dict = {
                 "t0": self.t,
                 "x": target_position,
@@ -419,7 +419,7 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
                 self.action_buffer[t] = []
             self.action_buffer[t].append((action, joint, current_t))
         return
-    
+
     def get_action_from_buffer(self, t, epsilon=None):
         """
         仅融合与 t 足够接近的那一个时间键(一格)的候选，并按时新度(重规划时间 t0 越新越大)进行加权平均。
@@ -457,7 +457,8 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         keys = list(self.action_buffer.keys())
         k_star = min(keys, key=lambda kk: abs(kk - t))
         if abs(k_star - t) > float(epsilon):
-            raise ValueError(f"No matching timestamp within epsilon: t={t}, nearest={k_star}, epsilon={epsilon}")
+            raise ValueError(
+                f"No matching timestamp within epsilon: t={t}, nearest={k_star}, epsilon={epsilon}")
 
         items = self.action_buffer.get(k_star, None)
         if not items:
@@ -467,7 +468,7 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         tau_r = float(getattr(self, "_te_tau_r", 0.25))  # 时间常数，越小越偏向最新重规划
         weights = []
         actions = []
-        joints  = []
+        joints = []
 
         for (action, joint, t0) in items:
             a = np.asarray(action, dtype=np.float32)
@@ -483,26 +484,24 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         if W <= 0:
             # 极端兜底：等权
             action_out = np.mean(actions, axis=0)
-            joint_out  = np.mean(joints,  axis=0)
+            joint_out = np.mean(joints,  axis=0)
         else:
             ws = np.asarray(weights, dtype=np.float32) / W
             action_out = sum(a * w for a, w in zip(actions, ws))
-            joint_out  = sum(j * w for j, w in zip(joints,  ws))
+            joint_out = sum(j * w for j, w in zip(joints,  ws))
 
         return action_out, joint_out
-        
-    
+
     def move_arm(self, jts, path):
         self.robot.arm.set_joint_target_positions(jts)
         return False
-    
+
     def expert_plan(self):
         expert_info = get_expert_info(self, bool_return_path=True)
         path = expert_info["path"]
         open = expert_info["open"]
         self.stage = expert_info["stage"]
         return path, open
-    
 
     def get_path(self, action):
         ignore_collisions = True

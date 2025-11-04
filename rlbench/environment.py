@@ -105,10 +105,10 @@ class Environment(object):
             panda_arm.remove()
             arm_path = join(DIR_PATH, 'robot_ttms', self._robot_setup + '.ttm')
             self._pyrep.import_model(arm_path)
-            arm, gripper = arm_class(), gripper_class()
+            arm, gripper = arm_class(max_velocity=3, max_acceleration=12), gripper_class()
             arm.set_position(panda_pos)
         else:
-            arm, gripper = arm_class(), gripper_class()
+            arm, gripper = arm_class(max_velocity=3, max_acceleration=12), gripper_class()
 
         self._robot = Robot(arm, gripper)
         if self._randomize_every is None:

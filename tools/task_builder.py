@@ -154,6 +154,8 @@ class LoadedTask(object):
         try:
             task_name = self.task.get_name()
             if task_name in [
+                "reach_single_moving_target_on_the_table",
+                "reach_single_moving_target_on_the_table_high_speed",
                 'pick_moving_target_on_the_table',
                 'place_cups_on_rotating_frame',
                 'remove_cups_from_rotating_frame',
@@ -290,7 +292,7 @@ if __name__ == '__main__':
     pr.launch(ttt_file, responsive_ui=True)
     pr.step_ui()
 
-    robot = Robot(Panda(), PandaGripper())
+    robot = Robot(Panda(max_velocity=3, max_acceleration=12), PandaGripper())
     cam_config = CameraConfig(rgb=True, depth=False, mask=False,
                               render_mode=RenderMode.OPENGL)
     obs_config = ObservationConfig()

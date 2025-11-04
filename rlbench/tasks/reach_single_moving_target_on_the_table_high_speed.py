@@ -351,7 +351,7 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
             ]
 
     def variation_count(self) -> int:
-        return 1
+        return 2
 
     def step(self) -> None:
         tip_speed = np.linalg.norm(self.robot.arm.get_tip().get_velocity())

@@ -320,12 +320,12 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
                 "v": v,
                 "a": a,
             })
-        import pickle
-        target_state_pkl = "./target_state.pkl"
+        # import pickle
+        # target_state_pkl = "./target_state.pkl"
         # with open(target_state_pkl, 'wb') as f:
         #     pickle.dump(self.var2target_state_list, f)
-        with open(target_state_pkl, 'rb') as f:
-            self.var2target_state_list = pickle.load(f)
+        # with open(target_state_pkl, 'rb') as f:
+        #     self.var2target_state_list = pickle.load(f)
         target_state = self.var2target_state_list[self.var_index][0]
         # save target_state
         self.cleanup()
@@ -383,7 +383,7 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
             self.target_state_list.append(target_state_dict)
 
         if self._bool_expert:
-            if self.step_id % 4 == 0:
+            if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
                 # from matplotlib import pyplot as plt
@@ -394,10 +394,14 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
                 # subplot.set_title('tip speed vs step')
                 # plt.savefig('tip_speed.png')
                 # plt.close()
-                if self._path is not None:
-                    self.store_path_to_buffer(self._path, current_t=self.t, dt=simulation_timestep)
-            action, jts = self.get_action_from_buffer(self.t)
-            self._path_done = self.move_arm(jts, self._path)
+                # if self._path is not None:
+                #     self.store_path_to_buffer(self._path, current_t=self.t, dt=simulation_timestep)
+            # action, jts = self.get_action_from_buffer(self.t)
+            # self._path_done = self.move_arm(jts, self._path)
+            if self._path is not None:
+                self._path_done = self._path.step()
+            else:
+                self._path_done = False
             if self._path_done:
                 self.move_gripper_tip([self._open])
         self.step_id += 1

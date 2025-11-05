@@ -167,6 +167,7 @@ class LoadedTask(object):
                 'moving_basketball_in_hoop',
                 'insert_onto_rotating_peg',
                 'beat_the_rotating_buzz',
+                'beat_the_rotating_buzz_high_speed',
                 'close_moving_door',
                 'close_moving_box',
             ]:

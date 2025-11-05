@@ -161,6 +161,7 @@ class LoadedTask(object):
                 'place_cups_on_rotating_frame',
                 'place_cups_on_rotating_frame_high_speed',
                 'remove_cups_from_rotating_frame',
+                'remove_cups_from_rotating_frame_high_speed',
                 'put_rubbish_in_moving_bin', 
                 'push_moving_button',
                 'moving_basketball_in_hoop',

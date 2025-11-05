@@ -214,7 +214,7 @@ class RemoveCupsFromRotatingFrameHighSpeed(Task):
         self._frame_base = Shape('place_cups_holder_base')
         for var_index in range(self.variation_count()):
             yaw_speed = [init_target_state(
-                min_yaw=40, # 5 degree/s
+                min_yaw=45, # 5 degree/s
                 max_yaw=50, # 15 degree/s
                 d_yaw=1,
             )]
@@ -290,9 +290,9 @@ class RemoveCupsFromRotatingFrameHighSpeed(Task):
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-            if not self._path_done:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
 
         self.step_id += 1

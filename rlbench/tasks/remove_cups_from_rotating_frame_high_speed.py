@@ -266,20 +266,20 @@ class RemoveCupsFromRotatingFrameHighSpeed(Task):
         # -1.9321348667144775,0.1937483549118042, 2.1352787017822266, 2.0415501594543457])
         # self.robot.arm.set_joint_positions(init_joint_angles, disable_dynamics=True)
         if self.cups_to_remove == 1:
-            return ['remove 1 cup from the cup holder and place it on the '
+            return ['remove 1 cup from the high speed cup holder and place it on the '
                     'table',
-                    'remove one cup from the mug holder',
-                    'pick up 1 cup from the mug tree and place it on the table',
-                    'slide 1 mug off of its spoke on the cup holder and leave '
+                    'remove one cup from the high speed mug holder',
+                    'pick up 1 cup from the high speed mug tree and place it on the table',
+                    'slide 1 mug off of its spoke on the high speed cup holder and leave '
                     'it on the table top']
         else:
-            return ['remove %d cups from the cup holder and place it on the '
+            return ['remove %d cups from the high speed cup holder and place it on the '
                     'table' % self.cups_to_remove,
-                    'remove %d cups from the cup holder' % self.cups_to_remove,
-                    'pick up %d cups from the mug tree and place them on the '
+                    'remove %d cups from the high speed cup holder' % self.cups_to_remove,
+                    'pick up %d cups from the high speed mug tree and place them on the '
                     'table' % self.cups_to_remove,
-                    'slide %d mugs off of their spokes on the cup holder and '
-                    'leave them on the table top' % self.cups_to_remove]
+                    'slide %d mugs off of their spokes on the high speed cup holder and '
+                    'leave them on the high speed table top' % self.cups_to_remove]
 
     def step(self) -> None:
         self.yaw_speed = self.target_state_list[-1]['yaw_speed']

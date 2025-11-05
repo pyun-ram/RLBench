@@ -287,19 +287,19 @@ class PlaceCupsOnRotatingFrameHighSpeed(Task):
         })
 
         if index == 0:
-            return ['place 1 cup on the cup holder',
-                    'pick up one cup and put it on the mug tree',
-                    'move 1 mug from the table to the cup holder',
+            return ['place 1 cup on the high speed cup holder',
+                    'pick up one cup and put it on the high speed mug tree',
+                    'move 1 mug from the table to the high speed cup holder',
                     'pick up one cup and slide its handle onto a spoke on the '
-                    'mug holder']
+                    'high speed mug holder']
         else:
-            return ['place %d cups on the cup holder' % (index + 1),
+            return ['place %d cups on the high speed cup holder' % (index + 1),
                     'pick up %d cups and place them on the holder'
                     % (index + 1),
-                    'move %d cups from the table to the mug tree'
+                    'move %d cups from the table to the high speed mug tree'
                     % (index + 1),
                     'pick up %d mugs and slide their handles onto the cup '
-                    'holder spokes' % (index + 1)]
+                    'high speed holder spokes' % (index + 1)]
     
     # def _get_waypoints(self, validating=False):
     #     return []

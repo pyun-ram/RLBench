@@ -194,10 +194,10 @@ class PushMovingButtonHighSpeed(Task):
         self.wp1 = Dummy('waypoint1')
         self.wp0_init_pose = self.wp0.get_pose()
         self.wp1_init_pose = self.wp1.get_pose()
-        return ['push the moving %s button' % button_color_name,
-                'push down the moving%s button' % button_color_name,
-                'press the moving button with the %s base' % button_color_name,
-                'press the moving %s button' % button_color_name]
+        return ['push the high speed moving %s button' % button_color_name,
+                'push down the high speed moving%s button' % button_color_name,
+                'press the high speed moving button with the %s base' % button_color_name,
+                'press the high speed moving %s button' % button_color_name]
 
     def is_static_workspace(self):
         return True

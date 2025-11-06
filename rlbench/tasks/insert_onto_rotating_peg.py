@@ -254,9 +254,9 @@ class InsertOntoRotatingPeg(Task):
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-            if not self._path_done:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
 
         self.step_id += 1

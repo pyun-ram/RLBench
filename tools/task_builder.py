@@ -163,13 +163,17 @@ class LoadedTask(object):
                 'remove_cups_from_rotating_frame',
                 'remove_cups_from_rotating_frame_high_speed',
                 'put_rubbish_in_moving_bin', 
+                'put_rubbish_in_moving_bin_high_speed',
                 'push_moving_button',
+                'push_moving_button_high_speed',
                 'moving_basketball_in_hoop',
+                'moving_basketball_in_hoop_high_speed',
                 'insert_onto_rotating_peg',
+                'insert_onto_rotating_peg_high_speed',
                 'beat_the_rotating_buzz',
                 'beat_the_rotating_buzz_high_speed',
-                'close_moving_door',
                 'close_moving_box',
+                'close_moving_box_high_speed',
             ]:
                 self.scene.get_demo_with_expert(False, randomly_place=False)
             else:

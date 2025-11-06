@@ -254,9 +254,9 @@ class InsertOntoRotatingPegHighSpeed(Task):
         print("yaw_speed", self.yaw_speed)
         print("var2target_state_list", self.var2target_state_list)
 
-        return ['put the ring on the %s spoke' % color_name,
-                'slide the ring onto the %s colored spoke' % color_name,
-                'place the ring onto the %s spoke' % color_name]
+        return ['put the ring on the high speed rotating %s spoke' % color_name,
+                'slide the ring onto the high speed rotating %s colored spoke' % color_name,
+                'place the ring onto the high speed rotating %s spoke' % color_name]
 
     def step(self) -> None:
         print(self.yaw_speed)

@@ -266,8 +266,11 @@ class PlaceCupsOnRotatingFrameHighSpeed(Task):
         self._index = index
         # b = SpawnBoundary([self._cups_boundary])
         # [b.sample(c, min_distance=0.10) for c in self._cups]
-        [f.set_pose(self.var2target_state_list[index]['cups_poses'][i])
-            for i, f in enumerate(self._cups)]
+        for i, f in enumerate(self._cups):
+            if i == 0:
+                f.set_position(self.var2target_state_list[index]['cups_poses'][i][:3])
+            else:
+                f.set_pose(self.var2target_state_list[index]['cups_poses'][i])
         self._frame_base.set_position(
             self.var2target_state_list[index]['frame_position']
         )

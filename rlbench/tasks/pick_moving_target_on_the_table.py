@@ -185,7 +185,7 @@ class PickMovingTargetOnTheTable(Task):
             "a": target_state['a'],
             "t0": 0,
         })
-        # self.target_block.set_position(target_state['x'])
+        self.target_block.set_position(target_state['x'])
         self.step_id = 0
         self.t = 0
         return ['pick up the %s block and lift it up to the target' %

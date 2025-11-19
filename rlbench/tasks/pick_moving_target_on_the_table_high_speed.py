@@ -112,6 +112,10 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
 class PickMovingTargetOnTheTableHighSpeed(Task):
 
     def init_task(self) -> None:
+        # This task does not use waypoints, so we need to remove them in case of failure in reset the environment.
+        for i in range(4):
+            waypoint = Dummy('waypoint%d' % i)
+            waypoint.remove()
         self.target_block = Shape('pick_and_lift_target')
         self.distractors = [
             Shape('stack_blocks_distractor%d' % i)

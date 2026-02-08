@@ -17,6 +17,7 @@ def get_expert_info(task, bool_return_path=True):
     stage = task.stage
     wp0_pose = deepcopy(task.wp0_init_pose)
     wp1_pose = deepcopy(task.wp1_init_pose)
+    wp1_pose[2] -= 0.02
     wp2_pose = deepcopy(task.wp2_init_pose)
     wp3_pose = deepcopy(task.wp3.get_pose())
 

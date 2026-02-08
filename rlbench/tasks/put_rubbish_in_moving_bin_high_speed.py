@@ -139,7 +139,7 @@ class PutRubbishInMovingBinHighSpeed(Task):
         self.wp2 = Dummy('waypoint2')
         self.wp3 = Dummy('waypoint3')
         self.step_id = 0
-        self.area = [0, -0.5, 0.85, 0.2, 0.5, 0.85]
+        self.area = [0.1, -0.5, 0.85, 0.4, 0.5, 0.85]
         self.t_max = 1 # (s)
         self.step_id = 0
         self.t = 0
@@ -154,7 +154,7 @@ class PutRubbishInMovingBinHighSpeed(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-1, -1, 0, 1, 1, 0],
+                v_range=[-0.8, -0.8, 0, 0.8, 0.8, 0],
                 a_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
                 x0=None,
                 v0=None,
@@ -165,7 +165,7 @@ class PutRubbishInMovingBinHighSpeed(Task):
                 min_velo_norm=0.6,
                 min_acc_norm=0.1 if bool_a else 0,
             )
-            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=(3,2))
+            frame_dx_dy = np.random.uniform([-0.02, -0.02], [0.02, 0.02], size=(3,2))
             tomato1 = Shape('tomato1')
             tomato2 = Shape('tomato2')
             tomato1_position = tomato1.get_position() + [frame_dx_dy[0][0], frame_dx_dy[0][1], 0]

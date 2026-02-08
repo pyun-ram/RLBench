@@ -147,7 +147,7 @@ class InsertOntoRotatingPeg(Task):
                 d_yaw=1,
             )
             color_name, color_rgb = colors[var_index]
-            target_spoke = np.random.choice(['pillar0', 'pillar1', 'pillar2'])
+            target_spoke = np.random.choice(['pillar0', 'pillar2'])
             color_choices = np.random.choice(
                 list(range(var_index)) + list(range(var_index + 1, len(colors))),
                 size=2, replace=False)
@@ -177,7 +177,7 @@ class InsertOntoRotatingPeg(Task):
                     d_yaw=1,
                 )
                 color_name, color_rgb = colors[var_index]
-                target_spoke = np.random.choice(['pillar0', 'pillar1', 'pillar2'])
+                target_spoke = np.random.choice(['pillar0', 'pillar2'])
                 color_choices = np.random.choice(
                     list(range(var_index)) + list(range(var_index + 1, len(colors))),
                     size=2, replace=False)
@@ -315,7 +315,7 @@ class InsertOntoRotatingPeg(Task):
         return
 
     def get_path(self, action):
-        ignore_collisions = False
+        ignore_collisions = True
         relative_to = None
         try:
             # try once with collision checking (if ignore_collisions is true)

@@ -158,8 +158,8 @@ class InsertOntoRotatingPeg(Task):
         self._frame_base = Shape('square_base')
         for var_index in range(self.variation_count()):
             yaw_speed = init_target_state(
-                min_yaw=2.5,  # 5 degree/s
-                max_yaw=7.5,  # 15 degree/s
+                min_yaw=7.5,  # 15 degree/s
+                max_yaw=20,  # 40 degree/s
                 d_yaw=1,
             )
             color_name, color_rgb = colors[var_index]

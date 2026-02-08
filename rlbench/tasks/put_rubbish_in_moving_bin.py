@@ -26,7 +26,7 @@ def get_expert_info(task, bool_return_path=True):
     dist_to_wp3 = np.linalg.norm(tip_pose[:3] - wp3_pose[:3])
 
     th_wp0 = 0.1
-    th_wp1 = 0.05
+    th_wp1 = 0.01
     th_wp2 = 0.05
     th_wp3 = 0.05
     is_grasping = len(task.robot.gripper.get_grasped_objects()) > 0
@@ -156,12 +156,12 @@ class PutRubbishInMovingBin(Task):
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,
             )
-            frame_dx_dy = np.random.uniform([-0.02, -0.02], [0.02, 0.02], size=(3,2))
+            frame_dx_dy = np.random.uniform([0.05, -0.4], [0.12, 0.4], size=(3,2))
             tomato1 = Shape('tomato1')
             tomato2 = Shape('tomato2')
-            tomato1_position = tomato1.get_position() + [frame_dx_dy[0][0], frame_dx_dy[0][1], 0]
-            tomato2_position = tomato2.get_position() + [frame_dx_dy[1][0], frame_dx_dy[1][1], 0]
-            rubbish_position = self.rubbish.get_position() + [frame_dx_dy[2][0], frame_dx_dy[2][1], 0]
+            tomato1_position = np.array([frame_dx_dy[0][0], frame_dx_dy[0][1], 0.8])
+            tomato2_position = np.array([frame_dx_dy[1][0], frame_dx_dy[1][1], 0.8])
+            rubbish_position = np.array([frame_dx_dy[2][0], frame_dx_dy[2][1], 0.8])
             positions = np.array([tomato1_position, tomato2_position, rubbish_position])
             pos = np.random.randint(3)
             self.var2target_state_list[var_index] = {

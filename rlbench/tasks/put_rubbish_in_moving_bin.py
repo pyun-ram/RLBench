@@ -4,7 +4,7 @@ from pyrep.objects.proximity_sensor import ProximitySensor
 from pyrep.objects.shape import Shape
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
-from .reach_single_moving_target_on_the_table import get_state_config, init_target_state, compute_target_position
+from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary, compute_target_position
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError
@@ -101,6 +101,7 @@ def get_expert_info(task, bool_return_path=True):
     expert_info = {
         "trajectory": torch.from_numpy(output),
         "stage": stage,
+        "open": open,
         "debug_info": {
             "tip_cur_position": tip_pose[:3],
             "tar_position": task.bin.get_position(),
@@ -108,7 +109,11 @@ def get_expert_info(task, bool_return_path=True):
         }
     }
     if bool_return_path:
-        path = task.get_path(eepose)
+        try:
+            path = task.get_path(eepose)
+        except:
+            path = None
+            print(f"path is None")
         expert_info["path"] = path
     return expert_info
 class PutRubbishInMovingBin(Task):
@@ -125,7 +130,7 @@ class PutRubbishInMovingBin(Task):
         self.wp2 = Dummy('waypoint2')
         self.wp3 = Dummy('waypoint3')
         self.step_id = 0
-        self.area = [0, -0.5, 0.85, 0.2, 0.5, 0.85]
+        self.area = [0.15, -0.5, 0.85, 0.4, 0.5, 0.85]
         self.t_max = 6.5 # (s)
         self.step_id = 0
         self.t = 0
@@ -151,7 +156,7 @@ class PutRubbishInMovingBin(Task):
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,
             )
-            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=(3,2))
+            frame_dx_dy = np.random.uniform([-0.02, -0.02], [0.02, 0.02], size=(3,2))
             tomato1 = Shape('tomato1')
             tomato2 = Shape('tomato2')
             tomato1_position = tomato1.get_position() + [frame_dx_dy[0][0], frame_dx_dy[0][1], 0]
@@ -212,22 +217,36 @@ class PutRubbishInMovingBin(Task):
     def step(self) -> None:
         simulation_timestep = self.pyrep.get_simulation_timestep()
         target_state_dict = self.target_state_list[-1]
-        target_position = compute_target_position(
+        target_position, target_velocity = compute_target_position(
             t=self.t,
             t0=target_state_dict["t0"],
             x0=target_state_dict["x"],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
-            dt=simulation_timestep,
+            dt=simulation_timestep,            bool_return_velocity=True,
         )
-        self.bin.set_position(target_position)
+        bool_cross, boundary_index = cross_boundary(target_position, self.bin, self.area)
+        if not bool_cross:
+            self.bin.set_position(target_position)
+        else:
+            self.bin.set_position(target_position)
+            new_target_velocity = deepcopy(target_velocity)
+            for itm in boundary_index:
+                new_target_velocity[itm] = - new_target_velocity[itm]
+            target_state_dict = {
+                "t0": self.t,
+                "x": target_position,
+                "v": new_target_velocity,
+                "a": target_state_dict["a"],
+            }
+            self.target_state_list.append(target_state_dict)
         if self._bool_expert:
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-            if not self._path_done:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep

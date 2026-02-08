@@ -20,6 +20,7 @@ def get_expert_info(task, bool_return_path=True):
     wp1_pose[2] -= 0.02
     wp2_pose = deepcopy(task.wp2_init_pose)
     wp3_pose = deepcopy(task.wp3.get_pose())
+    wp3_pose[2] -= 0.02
 
     dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
     dist_to_wp1 = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])
@@ -155,16 +156,16 @@ class PutRubbishInMovingBinHighSpeed(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-0.8, -0.8, 0, 0.8, 0.8, 0],
-                a_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
+                v_range=[-0.6, -0.6, 0, 0.6, 0.6, 0],
+                a_range=[-0.3, -0.3, 0, 0.3, 0.3, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.025, 0.025, 0.025],
-                da=[0.2, 0.2, 0.2],
-                min_velo_norm=0.6,
-                min_acc_norm=0.1 if bool_a else 0,
+                da=[0.1, 0.1, 0.1],
+                min_velo_norm=0.4,
+                min_acc_norm=0.05 if bool_a else 0,
             )
             frame_dx_dy = np.random.uniform([0.0, -0.4], [0.06, 0.4], size=(3,2))
             tomato1 = Shape('tomato1')

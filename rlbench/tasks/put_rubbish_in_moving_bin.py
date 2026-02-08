@@ -20,6 +20,7 @@ def get_expert_info(task, bool_return_path=True):
     wp1_pose[2] -= 0.02
     wp2_pose = deepcopy(task.wp2_init_pose)
     wp3_pose = deepcopy(task.wp3.get_pose())
+    wp3_pose[2] -= 0.02
 
     dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
     dist_to_wp1 = np.linalg.norm(tip_pose[:3] - wp1_pose[:3])

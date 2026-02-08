@@ -30,6 +30,7 @@ def get_expert_info(task, bool_return_path=True):
     dist_to_wp3 = np.linalg.norm(tip_pose[:3] - w3_pose[:3])
     dist_to_wp4 = np.linalg.norm(tip_pose[:3] - w4_pose[:3])
     is_grasp = len(task.robot.gripper.get_grasped_objects()) > 0
+    is_open = any(x > 0.95 for x in task.robot.gripper.get_open_amount())
 
     th_wp0 = 0.1
     th_wp1 = 0.05
@@ -58,8 +59,14 @@ def get_expert_info(task, bool_return_path=True):
         stage = 'wp3'
     elif stage == 'wp3' and dist_to_wp3 <= th_wp3:
         stage = 'wp4'
-    elif stage == 'wp4':
+    elif stage == 'wp4' and dist_to_wp4 > th_wp4:
         stage = 'wp4'
+    elif stage == 'wp4' and dist_to_wp4 <= th_wp4:
+        stage = 'wp4-open'
+    elif stage == 'wp4-open' and not is_grasp:
+        stage = 'wp0'
+    elif stage == 'wp4-open' and is_grasp:
+        stage = 'wp4-open'
     else:
         print("Unrecognized stage: ", stage)
         import pdb
@@ -70,7 +77,7 @@ def get_expert_info(task, bool_return_path=True):
         open = 1
     elif stage == 'wp1':
         eepose = w1_pose
-        open = 0
+        open = 1
     elif stage == 'wp1-grasp':
         eepose = w1_pose
         open = 0
@@ -95,13 +102,22 @@ def get_expert_info(task, bool_return_path=True):
             t_delay,
             yaw_speed=task.yaw_speed,
         )
+        open = 0
+    elif stage == 'wp4-open':
+        t_delay = 0.5
+        eepose = compute_target_pose(
+            task._frame_base,
+            task.w4,
+            t_delay,
+            yaw_speed=task.yaw_speed,
+        )
         open = 1
     else:
         print("Unrecognized stage: ", stage)
         import pdb
         pdb.set_trace()
 
-    print(f"stage: {stage}, eepose: {eepose}, open: {open}, dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}, dist_to_wp4: {dist_to_wp4:.2f}")
+    print(f"stage: {stage}, eepose: {eepose}, open: {open}, dist_to_wp0: {dist_to_wp0:.2f}, dist_to_wp1: {dist_to_wp1:.2f}, dist_to_wp2: {dist_to_wp2:.2f}, dist_to_wp3: {dist_to_wp3:.2f}, dist_to_wp4: {dist_to_wp4:.2f}, is_open:{is_open}, ring_pos: {task._square_ring.get_position()}")
     print('---------------------------------')
     output = np.ones((1, 1, 8))
     output[0, 0, :7] = eepose

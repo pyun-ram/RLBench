@@ -10,7 +10,7 @@ from .reach_single_moving_target_on_the_table_high_speed import get_state_config
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError, IKError
-# import torch
+import torch
 import numpy as np
 from pyrep.objects.dummy import Dummy
 from pyrep.backend import sim, utils
@@ -158,7 +158,7 @@ def get_expert_info(task, bool_return_path=True):
     output[0, 0, 3:7] = w1_init_pose[3:7]
     output[0, 0, 7:] = open
     expert_info = {
-        "trajectory": output,
+        "trajectory": torch.from_numpy(output),
         "stage": stage,
         "open": open,
         "debug_info": {

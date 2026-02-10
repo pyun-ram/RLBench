@@ -159,9 +159,11 @@ class InsertOntoRotatingPeg(Task):
         for var_index in range(self.variation_count()):
             yaw_speed = init_target_state(
                 min_yaw=7.5,  # 15 degree/s
-                max_yaw=20,  # 40 degree/s
+                max_yaw=24,  # 40 degree/s
                 d_yaw=1,
             )
+            direction = np.random.choice([-1, 1])
+            yaw_speed = yaw_speed * direction
             color_name, color_rgb = colors[var_index]
             target_spoke = np.random.choice(['pillar0', 'pillar2'])
             color_choices = np.random.choice(
@@ -188,10 +190,12 @@ class InsertOntoRotatingPeg(Task):
         if bool_random_place:
             for var_index in range(self.variation_count()):
                 yaw_speed = init_target_state(
-                    min_yaw=2.5,  # 5 degree/s
-                    max_yaw=7.5,  # 15 degree/s
+                    min_yaw=7.5,  # 15 degree/s
+                    max_yaw=24,  # 40 degree/s
                     d_yaw=1,
                 )
+                direction = np.random.choice([-1, 1])
+                yaw_speed = yaw_speed * direction
                 color_name, color_rgb = colors[var_index]
                 target_spoke = np.random.choice(['pillar0', 'pillar2'])
                 color_choices = np.random.choice(

@@ -162,6 +162,8 @@ class InsertOntoRotatingPegHighSpeed(Task):
                 max_yaw=100,  # 15 degree/s
                 d_yaw=1,
             )
+            direction = np.random.choice([-1, 1])
+            yaw_speed = yaw_speed * direction
             color_name, color_rgb = colors[var_index]
             target_spoke = np.random.choice(['pillar0', 'pillar2'])
             color_choices = np.random.choice(
@@ -192,6 +194,8 @@ class InsertOntoRotatingPegHighSpeed(Task):
                     max_yaw=100,  # 15 degree/s
                     d_yaw=1,
                 )
+                direction = np.random.choice([-1, 1])
+                yaw_speed = yaw_speed * direction
                 color_name, color_rgb = colors[var_index]
                 target_spoke = np.random.choice(['pillar0', 'pillar2'])
                 color_choices = np.random.choice(

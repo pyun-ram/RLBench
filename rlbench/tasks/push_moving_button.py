@@ -3,7 +3,7 @@ from pyrep.objects.shape import Shape
 from pyrep.objects.joint import Joint
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import JointCondition, ConditionSet
-from .reach_single_moving_target_on_the_table import get_state_config, compute_target_position, init_target_state
+from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError, IKError
@@ -11,6 +11,7 @@ import torch
 import numpy as np
 from pyrep.objects.dummy import Dummy
 from pyrep.backend import sim, utils
+from copy import deepcopy
 
 # button top plate and wrapper will be be red before task completion
 # and be changed to cyan upon success of task, so colors list used to randomly vary colors of
@@ -59,12 +60,7 @@ def get_expert_info(task, bool_return_path=True):
         open = 1
         t_delay = 0.0
         eepose = wp0_pose
-    elif stage == 'wp0' and dist_to_wp0 <= th_wp0 and is_open:
-        stage = 'wp0'
-        open = 0
-        t_delay = 0.0
-        eepose = tip_pose
-    elif stage == 'wp0' and dist_to_wp0 <= th_wp0 and not is_open:
+    elif stage == 'wp0' and dist_to_wp0 <= th_wp0:
         stage = 'wp1'
         open = 0
         t_delay = 0.5
@@ -115,7 +111,11 @@ def get_expert_info(task, bool_return_path=True):
         }
     }
     if bool_return_path:
-        path = task.get_path(eepose)
+        try:
+            path = task.get_path(eepose)
+        except:
+            path = None
+            print(f"path is None")
         expert_info["path"] = path
     return expert_info
 
@@ -131,7 +131,7 @@ class PushMovingButton(Task):
         self.goal_condition = JointCondition(self.joint, 0.003)
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 6.5  # (s)
+        self.t_max = 2  # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True
@@ -144,16 +144,16 @@ class PushMovingButton(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
-                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                v_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
+                a_range=[-0.25, -0.25, 0, 0.25, 0.25, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
-                dv=[0.025, 0.025, 0.025],
-                da=[0.001, 0.001, 0.001],
-                min_velo_norm=0.03,
-                min_acc_norm=0.01 if bool_a else 0,
+                dv=[0.0125, 0.0125, 0.0125],
+                da=[0.1, 0.1, 0.1],
+                min_velo_norm=0.5,
+                min_acc_norm=0.05 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({
                 "x": x,
@@ -208,22 +208,39 @@ class PushMovingButton(Task):
             self.target_topPlate.set_color([0.0, 1.0, 0.0])
             self.target_wrap.set_color([0.0, 1.0, 0.0])
         target_state_dict = self.target_state_list[-1]
-        target_position = compute_target_position(
+        target_position, target_velocity = compute_target_position(
             t=self.t,
             t0=target_state_dict["t0"],
             x0=target_state_dict["x"],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=True,
         )
-        self.target_button.set_position(target_position)
+        bool_cross, boundary_index = cross_boundary(
+            target_position, self.target_button, self.area)
+        if not bool_cross:
+            self.target_button.set_position(target_position)
+        else:
+            self.target_button.set_position(target_position)
+            new_target_velocity = deepcopy(target_velocity)
+            for itm in boundary_index:
+                new_target_velocity[itm] = - new_target_velocity[itm]
+            target_state_dict = {
+                "t0": self.t,
+                "x": target_position,
+                "v": new_target_velocity,
+                "a": target_state_dict["a"],
+            }
+            self.target_state_list.append(target_state_dict)
+
         if self._bool_expert:
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-            if not self._path_done:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep

@@ -9,7 +9,8 @@ from typing import List, Tuple
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from pyrep.objects import ProximitySensor, Shape, Dummy
-import torch
+from .reach_single_moving_target_on_the_table_high_speed import cross_boundary
+from copy import deepcopy
 
 def compute_target_position(
     t: float,
@@ -18,6 +19,7 @@ def compute_target_position(
     a0: List[float],
     t0: float,
     dt: float = None,
+    bool_return_velocity: bool = False,
 ) -> List[float]:
     '''
     Args:
@@ -34,7 +36,11 @@ def compute_target_position(
     v0 = np.array(v0)
     a0 = np.array(a0)
     pos = x0 + v0 * t_rel + 0.5 * a0 * t_rel**2
-    return pos.tolist()
+    if not bool_return_velocity:
+        return pos.tolist()
+    else:
+        return pos.tolist(), (v0 + a0 * t_rel).tolist()
+
 
 def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     # compensate for grasping delay
@@ -44,18 +50,21 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     dist_tip_tar = np.linalg.norm(tip_cur_position - tar_position)
     simulation_timestep = task.pyrep.get_simulation_timestep()
     target_state_dict = task.target_state_list[-1]
+    stage = 'reach'
+    wp_position = tar_position
     if dist_tip_tar >= th_grasp:
         stage = 'reach'
         wp_position = tar_position
     else:
         stage = 'grasp'
+        t_delay = 1.0
         wp_position = compute_target_position(
-            t = task.t+t_delay,
-            t0=task.t,
-            x0=tar_position,
+            t=task.t+t_delay,
+            t0=target_state_dict["t0"],
+            x0=target_state_dict["x"],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
-            dt = simulation_timestep,
+            dt=simulation_timestep,
         )
     eepose = np.ones((7))
     eepose[:7] = tip_cur_pose
@@ -63,12 +72,13 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
     eepose[3:7] = np.array([0, 1, 0, 0])
     open = 1
     task.stage = stage
-    output = np.ones((1,1,8))
-    output[0,0,:7] = eepose
-    output[0,0,7:] = open
+    output = np.ones((1, 1, 8))
+    output[0, 0, :7] = eepose
+    output[0, 0, 7:] = open
     expert_info = {
         "trajectory": torch.from_numpy(output),
         "stage": stage,
+        "open": open,
         "debug_info": {
             "tip_cur_position": tip_cur_position,
             "tar_position": tar_position,
@@ -80,7 +90,11 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
         }
     }
     if bool_return_path:
-        path = task.get_path(eepose)
+        try:
+            path = task.get_path(eepose)
+        except Exception as e:
+            print(f"Exception: {e}")
+            path = None
         expert_info["path"] = path
     return expert_info
 
@@ -117,7 +131,7 @@ def init_target_state(
         a_range: List[float], [axmin,aymin,azmin,axmax,aymax,azmax] in Fworld
         dx: List[float], [dx,dy,dz]
         dv: List[float], [dvx,dvy,dvz]
-        da: List[float], [dvx,dvy,dvz]
+        da: List[float], [dax,day,daz]
         x0: List[float], initial position, 
         v0: List[float], initial velocity
         a0: List[float], initial acceleration
@@ -192,7 +206,7 @@ class ReachSingleMovingTargetOnTheTable(Task):
         self.t = None
         self.step_id = None
         self.target_state_list = None
-        self.t_max = 4  # (s)
+        self.t_max = 1  # (s)
         # area [xmin,ymin,zmin,xmax,ymax,zmax] in Fworld
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
         self.condition = DetectedCondition(
@@ -209,15 +223,15 @@ class ReachSingleMovingTargetOnTheTable(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
-                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                v_range=[-0.4, -0.4, 0, 0.4, 0.4, 0],
+                a_range=[-0.05, -0.05, 0, 0.05, 0.05, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
-                dv=[0.025, 0.025, 0.025],
-                da=[0.001, 0.001, 0.001],
-                min_velo_norm=0.03,
+                dv=[0.05, 0.05, 0.05],
+                da=[0.01, 0.01, 0.01],
+                min_velo_norm=0.1,
                 min_acc_norm=0.01 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({
@@ -243,6 +257,11 @@ class ReachSingleMovingTargetOnTheTable(Task):
             "t0": 0,
         })
         self.target.set_position(target_state["x"])
+        self.tip_speed_list = []
+        self.joint_velocity_dict_list = {i: [] for i in range(7)}
+        self.joint_force_dict_list = {i: [] for i in range(7)}
+        self.action_buffer = {}
+        assert len(self.action_buffer) == 0, "Action buffer should be empty"
         if index == 1:
             return [
                 "reach single accelerated ball on the table"
@@ -256,24 +275,43 @@ class ReachSingleMovingTargetOnTheTable(Task):
         return 2
 
     def step(self) -> None:
+        tip_speed = np.linalg.norm(self.robot.arm.get_tip().get_velocity())
+        self.tip_speed_list.append(tip_speed)
         simulation_timestep = self.pyrep.get_simulation_timestep()
         target_state_dict = self.target_state_list[-1]
-        target_position = compute_target_position(
+        target_position, target_velocity = compute_target_position(
             t=self.t,
             t0=target_state_dict["t0"],
             x0=target_state_dict["x"],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=True,
         )
-        self.target.set_position(target_position)
+        bool_cross, boundary_index = cross_boundary(
+            target_position, self.target, self.area)
+        if not bool_cross:
+            self.target.set_position(target_position)
+        else:
+            self.target.set_position(target_position)
+            new_target_velocity = deepcopy(target_velocity)
+            for itm in boundary_index:
+                new_target_velocity[itm] = - new_target_velocity[itm]
+            target_state_dict = {
+                "t0": self.t,
+                "x": target_position,
+                "v": new_target_velocity,
+                "a": target_state_dict["a"],
+            }
+            self.target_state_list.append(target_state_dict)
+
         if self._bool_expert:
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-            if not self._path_done:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep
@@ -326,7 +364,6 @@ class ReachSingleMovingTargetOnTheTable(Task):
             raise InvalidActionError(
                 'A path could not be found. Most likely due to the target '
                 'being inaccessible or a collison was detected.') from e
-        # path = modify_path(path)
         return path
 
     def move_gripper_tip(self, action):

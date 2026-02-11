@@ -142,7 +142,7 @@ class PutRubbishInMovingBinHighSpeed(Task):
         self.wp2 = Dummy('waypoint2')
         self.wp3 = Dummy('waypoint3')
         self.step_id = 0
-        self.area = [0.2, -0.5, 0.85, 0.5, 0.5, 0.85]
+        self.area = [0.15, -0.5, 0.85, 0.4, 0.5, 0.85]
         self.t_max = 1 # (s)
         self.step_id = 0
         self.t = 0
@@ -157,18 +157,18 @@ class PutRubbishInMovingBinHighSpeed(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
-                a_range=[-0.25, -0.25, 0, 0.25, 0.25, 0],
+                v_range=[-0.4, -0.4, 0, 0.4, 0.4, 0],
+                a_range=[-0.1, -0.1, 0, 0.1, 0.1, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.025, 0.025, 0.025],
-                da=[0.05, 0.05, 0.05],
-                min_velo_norm=0.3,
-                min_acc_norm=0.04 if bool_a else 0,
+                da=[0.02, 0.02, 0.02],
+                min_velo_norm=0.1,
+                min_acc_norm=0.02 if bool_a else 0,
             )
-            frame_dx_dy = get_unoverlapped_frame_dx_dy(n=3, x_range=[0.05, 0.12], y_range=[-0.4, 0.4])            # frame_dx_dy = np.random.uniform([0.0, -0.4], [0.06, 0.4], size=(3,2))
+            frame_dx_dy = get_unoverlapped_frame_dx_dy(n=3, x_range=[0.05, 0.12], y_range=[-0.4, 0.4])
             tomato1 = Shape('tomato1')
             tomato2 = Shape('tomato2')
             tomato1_position = np.array([frame_dx_dy[0][0], frame_dx_dy[0][1], 0.8])

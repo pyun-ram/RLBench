@@ -5,6 +5,7 @@ from pyrep.objects.shape import Shape
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary
+from .put_rubbish_in_moving_bin import get_unoverlapped_frame_dx_dy
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError
@@ -156,18 +157,18 @@ class PutRubbishInMovingBinHighSpeed(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-0.6, -0.6, 0, 0.6, 0.6, 0],
-                a_range=[-0.3, -0.3, 0, 0.3, 0.3, 0],
+                v_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
+                a_range=[-0.25, -0.25, 0, 0.25, 0.25, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.025, 0.025, 0.025],
-                da=[0.1, 0.1, 0.1],
-                min_velo_norm=0.4,
-                min_acc_norm=0.05 if bool_a else 0,
+                da=[0.05, 0.05, 0.05],
+                min_velo_norm=0.3,
+                min_acc_norm=0.04 if bool_a else 0,
             )
-            frame_dx_dy = np.random.uniform([0.0, -0.4], [0.06, 0.4], size=(3,2))
+            frame_dx_dy = get_unoverlapped_frame_dx_dy(n=3, x_range=[0.05, 0.12], y_range=[-0.4, 0.4])            # frame_dx_dy = np.random.uniform([0.0, -0.4], [0.06, 0.4], size=(3,2))
             tomato1 = Shape('tomato1')
             tomato2 = Shape('tomato2')
             tomato1_position = np.array([frame_dx_dy[0][0], frame_dx_dy[0][1], 0.8])

@@ -12,6 +12,24 @@ from pyrep.objects.dummy import Dummy
 import torch
 from copy import deepcopy
 
+def get_unoverlapped_frame_dx_dy(n, x_range, y_range):
+    min_dist_sq = 0.1  # 平方距离比较，避免开方
+    frame_dx_dy = np.empty((n, 2))
+    for i in range(n):
+        while True:
+            frame_dx_dy[i] = [
+                np.random.uniform(x_range[0], x_range[1]),
+                np.random.uniform(y_range[0], y_range[1]),
+            ]
+            overlap = False
+            for j in range(i):
+                if np.linalg.norm(frame_dx_dy[i] - frame_dx_dy[j]) < min_dist_sq:
+                    overlap = True
+                    break
+            if not overlap:
+                break
+    return frame_dx_dy
+
 def get_expert_info(task, bool_return_path=True):
     tip_pose = task.robot.arm.get_tip().get_pose()
     stage = task.stage
@@ -158,7 +176,7 @@ class PutRubbishInMovingBin(Task):
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,
             )
-            frame_dx_dy = np.random.uniform([0.05, -0.4], [0.12, 0.4], size=(3,2))
+            frame_dx_dy = get_unoverlapped_frame_dx_dy(n=3, x_range=[0.05, 0.12], y_range=[-0.4, 0.4])
             tomato1 = Shape('tomato1')
             tomato2 = Shape('tomato2')
             tomato1_position = np.array([frame_dx_dy[0][0], frame_dx_dy[0][1], 0.8])

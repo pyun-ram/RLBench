@@ -10,6 +10,7 @@ from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from pyrep.objects import ProximitySensor, Shape, Dummy
 from .reach_single_moving_target_on_the_table_high_speed import cross_boundary
+import torch
 from copy import deepcopy
 
 def compute_target_position(

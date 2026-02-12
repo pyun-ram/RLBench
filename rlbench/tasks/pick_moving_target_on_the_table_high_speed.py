@@ -114,9 +114,12 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
 
     def init_task(self) -> None:
         # This task does not use waypoints, so we need to remove them in case of failure in reset the environment.
-        for i in range(4):
-            waypoint = Dummy('waypoint%d' % i)
-            waypoint.remove()
+        try:
+            for i in range(4):
+                waypoint = Dummy('waypoint%d' % i)
+                waypoint.remove()
+        except:
+            print(f"Waypoints not found, will not remove them.")
         self.target_block = Shape('pick_and_lift_target')
         self.distractors = [
             Shape('stack_blocks_distractor%d' % i)

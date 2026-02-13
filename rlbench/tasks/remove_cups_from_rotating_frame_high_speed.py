@@ -214,10 +214,12 @@ class RemoveCupsFromRotatingFrameHighSpeed(Task):
         self._frame_base = Shape('place_cups_holder_base')
         for var_index in range(self.variation_count()):
             yaw_speed = [init_target_state(
-                min_yaw=45, # 5 degree/s
+                min_yaw=30, # 5 degree/s
                 max_yaw=50, # 15 degree/s
-                d_yaw=1,
+                d_yaw=0.5,
             )]
+            direction = np.random.choice([-1, 1])
+            yaw_speed[0] = yaw_speed[0] * direction
             frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=2)
             frame_position = self._frame_base.get_position() + [frame_dx_dy[0], frame_dx_dy[1], 0]
             self.var2target_state_list[var_index] = {

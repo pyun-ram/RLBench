@@ -131,7 +131,7 @@ class PushMovingButton(Task):
         self.goal_condition = JointCondition(self.joint, 0.003)
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 2  # (s)
+        self.t_max = 1  # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True
@@ -151,8 +151,8 @@ class PushMovingButton(Task):
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.0125, 0.0125, 0.0125],
-                da=[0.1, 0.1, 0.1],
-                min_velo_norm=0.5,
+                da=[0.01, 0.01, 0.01],
+                min_velo_norm=0.2,
                 min_acc_norm=0.05 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({

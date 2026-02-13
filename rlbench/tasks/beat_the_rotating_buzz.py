@@ -184,8 +184,10 @@ class BeatTheRotatingBuzz(Task):
             yaw_speed = init_target_state(
                 min_yaw=2.5,  # 5 degree/s
                 max_yaw=7.5,  # 15 degree/s
-                d_yaw=1,
+                d_yaw=0.5,
             )
+            direction = np.random.choice([-1, 1])
+            yaw_speed = yaw_speed * direction
             frame_position = np.random.uniform(self.area[:3], self.area[3:])
             self.var2target_state_list[var_index] = {
                 'yaw_speed': yaw_speed,

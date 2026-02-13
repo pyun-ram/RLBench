@@ -155,8 +155,8 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.025, 0.025, 0.025],
                 da=[0.2, 0.2, 0.2],
-                min_velo_norm=0.8,
-                min_acc_norm=0.1 if bool_a else 0,
+                min_velo_norm=0.4,
+                min_acc_norm=0.05 if bool_a else 0,
             )
             color_choices = np.random.choice(
             list(range(var_index)) + list(range(var_index + 1, len(colors))),

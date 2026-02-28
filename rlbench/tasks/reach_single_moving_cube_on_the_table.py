@@ -9,86 +9,9 @@ from typing import List, Tuple
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import DetectedCondition
 from pyrep.objects import ProximitySensor, Shape, Dummy
+from .reach_single_moving_target_on_the_table_high_speed import cross_boundary
 import torch
 from copy import deepcopy
-
-
-def cross_boundary(next_position: List[float], target: Shape, area: List[float]) -> Tuple[bool, int]:
-    '''
-    Args:
-        next_position: List[float], next position (x,y,z)
-        target: Shape, target object
-        area: List[float], area [xmin,ymin,zmin,xmax,ymax,zmax] in Fworld
-    Return:
-        Tuple[bool, int], whether cross boundary, which boundary
-            True, 0: cross x boundary
-            True, 1: cross y boundary
-            True, 2: cross z boundary
-            False, None: not cross boundary
-    '''
-    current_position = target.get_position()
-    cross_boundary_indices = []
-    bool_cross = False
-    # cross x boundary
-    if (current_position[0] >= area[0] and next_position[0] <= area[0]) or \
-            (current_position[0] <= area[3] and next_position[0] >= area[3]):
-        bool_cross = True
-        cross_boundary_indices.append(0)
-    # cross y boundary
-    if (current_position[1] >= area[1] and next_position[1] <= area[1]) or \
-            (current_position[1] <= area[4] and next_position[1] >= area[4]):
-        bool_cross = True
-        cross_boundary_indices.append(1)
-    return bool_cross, cross_boundary_indices
-
-
-def get_action_traj(path) -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Args:
-        path: ArmConfigurationPath
-    Returns:
-        np.ndarray, shape: (N, 7)
-    '''
-    from pyrep.backend import sim, utils
-
-    def _set_joints(path, positions):
-        [sim.simSetJointPosition(jh, p)  # type: ignore
-         for jh, p in zip(path._arm._joint_handles, positions)]
-        [j.set_joint_target_position(p)  # type: ignore
-         for j, p in zip(path._arm.joints, positions)]
-        return
-
-    if len(path._path_points) <= 0:
-        raise RuntimeError("Can't visualise a path with no points.")
-    tip = path._arm.get_tip()
-    init_angles = path._arm.get_joint_positions()
-    action_traj = []
-    joint_traj = []
-    is_model = path._arm.is_model()
-    if not is_model:
-        path._arm.set_model(True)
-    prior = sim.simGetModelProperty(path._arm.get_handle())
-    p = prior | sim.sim_modelproperty_not_dynamic
-    # Disable the dynamics
-    sim.simSetModelProperty(path._arm._handle, p)
-    with utils.step_lock:
-        sim.simExtStep(True)  # Have to step for changes to take effect
-    _set_joints(path, path._path_points[0: len(path._arm.joints)])
-    for i in range(len(path._arm.joints), len(path._path_points),
-                   len(path._arm.joints)):
-        points = path._path_points[i:i + len(path._arm.joints)]
-        _set_joints(path, points)
-        p = list(tip.get_pose())  # x,y,z,qx,qy,qz,qw
-        action_traj.append(p)
-        joint_traj.append(points)
-    _set_joints(path, init_angles)
-    with utils.step_lock:
-        sim.simExtStep(True)  # Have to step for changes to take effect
-    # Re-enable the dynamics
-    sim.simSetModelProperty(path._arm._handle, prior)
-    path._arm.set_model(is_model)
-    return np.array(action_traj), np.array(joint_traj)
-
 
 def compute_target_position(
     t: float,
@@ -176,7 +99,6 @@ def get_expert_info(task, th_grasp=0.4, t_delay=1.0, bool_return_path=True):
         expert_info["path"] = path
     return expert_info
 
-
 def get_state_config(var_index: int) -> bool:
     if var_index == 0:
         bool_a = False
@@ -185,7 +107,6 @@ def get_state_config(var_index: int) -> bool:
     else:
         raise ValueError("var_index must be 0, 1")
     return bool_a
-
 
 def init_target_state(
     t_max: float,
@@ -276,8 +197,7 @@ def init_target_state(
     target_state = target_state.tolist()
     return target_state[:3], target_state[3:6], target_state[6:9]
 
-
-class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
+class ReachSingleMovingCubeOnTheTable(Task):
 
     def init_task(self) -> None:
         self.target = Shape('target')
@@ -304,16 +224,16 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-1, -1, 0, 1, 1, 0],
-                a_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
+                v_range=[-0.4, -0.4, 0, 0.4, 0.4, 0],
+                a_range=[-0.05, -0.05, 0, 0.05, 0.05, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
-                dv=[0.025, 0.025, 0.025],
-                da=[0.2, 0.2, 0.2],
-                min_velo_norm=0.8,
-                min_acc_norm=0.1 if bool_a else 0,
+                dv=[0.05, 0.05, 0.05],
+                da=[0.01, 0.01, 0.01],
+                min_velo_norm=0.1,
+                min_acc_norm=0.01 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({
                 "x": x,
@@ -321,7 +241,7 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
                 "a": a,
             })
         return
-
+    
     def disable_expert_plan(self):
         self._bool_expert = False
         return
@@ -345,11 +265,11 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         assert len(self.action_buffer) == 0, "Action buffer should be empty"
         if index == 1:
             return [
-                "reach single accelerated ball on the table (high speed)"
+                "reach single accelerated ball on the table"
             ]
         else:
             return [
-                "reach single uniform-speed ball on the table (high speed)"
+                "reach single uniform-speed ball on the table"
             ]
 
     def variation_count(self) -> int:
@@ -398,100 +318,13 @@ class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
         self.t += simulation_timestep
         return
 
-    def store_path_to_buffer(self, path, current_t, dt):
-        action_traj, joint_traj = get_action_traj(path)
-        num_action = action_traj.shape[0]
-        for i in range(num_action):
-            action = action_traj[i]
-            joint = joint_traj[i]
-            t = current_t + i * dt
-            if t not in self.action_buffer:
-                self.action_buffer[t] = []
-            self.action_buffer[t].append((action, joint, current_t))
-        return
-
-    def get_action_from_buffer(self, t, epsilon=None):
-        """
-        仅融合与 t 足够接近的那一个时间键(一格)的候选，并按时新度(重规划时间 t0 越新越大)进行加权平均。
-        - self.action_buffer: Dict[float, List[(action(7,), joint(7,), t0)]]
-        key: 绝对时间戳(浮点)
-        value: 列表，元素为(行动向量, 关节向量, 该候选对应的重规划起始时间 t0)
-        - 若找不到与 t 在 epsilon 容差内的键，直接抛错
-        - 只融合这一格（不做跨时间邻域融合）
-
-        参数:
-        t: 目标执行时间(浮点)
-        epsilon: 匹配容差；默认 = max(1e-6, 0.2 * dt)
-                dt 会从 self.dt 或 self._dt_cache 推断，没有则默认 0.05
-
-        返回:
-        (action_out: np.ndarray(shape=[7]), joint_out: np.ndarray(shape=[7]))
-        """
-        import numpy as np
-        import math
-
-        # 1) 基本检查
-        if not hasattr(self, "action_buffer") or len(self.action_buffer) == 0:
-            raise ValueError("Action buffer is empty.")
-
-        # 2) 推断 dt 并确定 epsilon
-        if hasattr(self, "_dt_cache"):
-            dt = float(self._dt_cache)
-        else:
-            dt = float(getattr(self, "dt", 0.05))
-            self._dt_cache = dt  # 缓存一下
-        if epsilon is None:
-            epsilon = max(1e-6, 0.2 * dt)
-
-        # 3) 在键空间中寻找与 t 最近的键，只接受距离 <= epsilon
-        keys = list(self.action_buffer.keys())
-        k_star = min(keys, key=lambda kk: abs(kk - t))
-        if abs(k_star - t) > float(epsilon):
-            raise ValueError(
-                f"No matching timestamp within epsilon: t={t}, nearest={k_star}, epsilon={epsilon}")
-
-        items = self.action_buffer.get(k_star, None)
-        if not items:
-            raise ValueError(f"Action list at time {k_star} is empty")
-
-        # 4) 仅在这一格上做“时新度”加权（t0 越接近当前 t，权重越大）
-        tau_r = float(getattr(self, "_te_tau_r", 0.25))  # 时间常数，越小越偏向最新重规划
-        weights = []
-        actions = []
-        joints = []
-
-        for (action, joint, t0) in items:
-            a = np.asarray(action, dtype=np.float32)
-            j = np.asarray(joint,  dtype=np.float32)
-            # age = 当前执行时间距该候选重规划起点的时长
-            age = max(0.0, float(t) - float(t0))
-            w = math.exp(-age / max(1e-6, tau_r))
-            weights.append(w)
-            actions.append(a)
-            joints.append(j)
-
-        W = float(sum(weights))
-        if W <= 0:
-            # 极端兜底：等权
-            action_out = np.mean(actions, axis=0)
-            joint_out = np.mean(joints,  axis=0)
-        else:
-            ws = np.asarray(weights, dtype=np.float32) / W
-            action_out = sum(a * w for a, w in zip(actions, ws))
-            joint_out = sum(j * w for j, w in zip(joints,  ws))
-
-        return action_out, joint_out
-
-    def move_arm(self, jts, path):
-        self.robot.arm.set_joint_target_positions(jts)
-        return False
-
     def expert_plan(self):
         expert_info = get_expert_info(self, bool_return_path=True)
         path = expert_info["path"]
         open = expert_info["open"]
         self.stage = expert_info["stage"]
         return path, open
+    
 
     def get_path(self, action):
         ignore_collisions = True

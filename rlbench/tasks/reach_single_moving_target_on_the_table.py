@@ -415,3 +415,7 @@ class ReachSingleMovingTargetOnTheTable(Task):
 
     def is_static_workspace(self) -> bool:
         return True
+
+    def set_target_color(self, color: List[float]):
+        self.target.set_color(color)
+        return

@@ -277,7 +277,7 @@ def init_target_state(
     return target_state[:3], target_state[3:6], target_state[6:9]
 
 
-class ReachSingleMovingTargetOnTheTableHighSpeed(Task):
+class ReachSingleMovingCubeOnTheTableHighSpeed(Task):
 
     def init_task(self) -> None:
         self.target = Shape('target')

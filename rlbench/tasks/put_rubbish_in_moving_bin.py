@@ -211,9 +211,6 @@ class PutRubbishInMovingBin(Task):
             self.rubbish.set_position([x3, y3, z2])
             tomato1.set_position([x2, y2, z3])
 
-        if index > 0:
-            err_msg = "Error: Only variation0 is supported."
-            raise NotImplementedError(err_msg)
         self.var_index = index
         target_state = self.var2target_state_list[self.var_index]
         self.cleanup()

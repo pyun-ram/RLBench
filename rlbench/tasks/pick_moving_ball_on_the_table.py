@@ -180,9 +180,6 @@ class PickMovingBallOnTheTable(Task):
         self.success_detector.set_pose(self.var2target_state_list[index]["success_detector_pose"])
         for block in self.distractors:
             block.set_pose(self.var2target_state_list[index]["distractors_poses"][i])
-        if index > 0:
-            err_msg = "Error: Only variation0 is supported."
-            raise NotImplementedError(err_msg)
         self.var_index = index
         target_state = self.var2target_state_list[self.var_index]
         target_state["x"][-1] = self.target_block.get_position()[-1]

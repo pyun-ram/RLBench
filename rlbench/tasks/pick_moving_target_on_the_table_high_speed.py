@@ -183,7 +183,7 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
         return
 
     def init_episode(self, index: int) -> List[str]:
-        block_color_name, block_rgb = colors[index]
+        block_color_name, block_rgb = colors[0]
         self.target_block.set_color(block_rgb)
         color_choices = self.var2target_state_list[index]["color_choices"]
         for i, ob in enumerate(self.distractors):
@@ -192,9 +192,6 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
         self.success_detector.set_pose(self.var2target_state_list[index]["success_detector_pose"])
         for block in self.distractors:
             block.set_pose(self.var2target_state_list[index]["distractors_poses"][i])
-        if index > 0:
-            err_msg = "Error: Only variation0 is supported."
-            raise NotImplementedError(err_msg)
         self.var_index = index
         target_state = self.var2target_state_list[self.var_index]
         target_state["x"][-1] = self.target_block.get_position()[-1]

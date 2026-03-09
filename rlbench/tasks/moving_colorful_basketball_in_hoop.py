@@ -479,7 +479,7 @@ class MovingColorfulBasketballInHoop(Task):
 
 
     def variation_count(self) -> int:
-        return 1
+        return 2
 
     def base_rotation_bounds(self) -> Tuple[List[float], List[float]]:
         return [0, 0, -np.pi / 4], [0, 0, np.pi / 4]

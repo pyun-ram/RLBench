@@ -418,7 +418,7 @@ class PushMovingButtonHighSpeed(Task):
         return path
 
     def variation_count(self) -> int:
-        return 1
+        return 2
 
     def cleanup(self) -> None:
         self.target_state_list = []

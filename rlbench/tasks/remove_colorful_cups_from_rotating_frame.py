@@ -444,6 +444,6 @@ class RemoveColorfulCupsFromRotatingFrame(Task):
         return True
 
     def set_target_color(self, color: List[List[float]]):
-        for i, cup in enumerate([Shape('mug_visual%d' % i) for i in range(3)]):
+        for i, cup in enumerate([Shape('mug_visual%d' % i) for i in range(4)]):
             cup.set_color(color[i])
         return

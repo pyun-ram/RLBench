@@ -151,7 +151,7 @@ class PushMovingButton(Task):
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.0125, 0.0125, 0.0125],
-                da=[0.01, 0.01, 0.01],
+                da=[0.05, 0.05, 0.05],
                 min_velo_norm=0.2,
                 min_acc_norm=0.05 if bool_a else 0,
             )

@@ -173,7 +173,7 @@ class PushMovingButton(Task):
         self.target_topPlate.set_color([1.0, 0.0, 0.0])
         self.target_wrap.set_color([1.0, 0.0, 0.0])
         self.variation_index = index
-        button_color_name, button_rgb = colors[index]
+        button_color_name, button_rgb = colors[0]
         self.target_button.set_color(button_rgb)
         self.register_success_conditions(
             [ConditionSet([self.goal_condition], True, False)])

@@ -163,7 +163,8 @@ def get_expert_info(task, bool_return_path=True):
         "open": open,
         "debug_info": {
             "tip_cur_position": tip_pose[:3],
-            "tar_position": task.ball.get_position(),
+            "tar_position": [task.ball.get_position(), task.hoop.get_position()],
+            "is_grasping": len(task.robot.gripper.get_grasped_objects()) > 0,
             "t": task.t,
         }
     }

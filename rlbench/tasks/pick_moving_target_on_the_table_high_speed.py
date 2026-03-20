@@ -183,6 +183,8 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
         return
 
     def init_episode(self, index: int) -> List[str]:
+        for i in range(len(self.var2target_state_list[index]["distractors_poses"])):
+            self.var2target_state_list[index]["distractors_poses"][i][2] = 0.77
         block_color_name, block_rgb = colors[0]
         self.target_block.set_color(block_rgb)
         color_choices = self.var2target_state_list[index]["color_choices"]

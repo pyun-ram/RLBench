@@ -253,7 +253,7 @@ class PlaceColorfulCupsOnRotatingFrameHighSpeed(Task):
             )
             b = SpawnBoundary([self._cups_boundary])
             [b.sample(c, min_distance=0.10) for c in self._cups]
-            frame_dx_dy = np.random.uniform([-0.1, -0.1], [0.1, 0.1], size=2)
+            frame_dx_dy = np.random.uniform([-0.05, -0.05], [0.05, 0.05], size=2)
             frame_position = self._frame_base.get_position() + [frame_dx_dy[0], frame_dx_dy[1], 0]
             self.var2target_state_list[var_index] = {
                 'yaw_speed': yaw_speed,

@@ -47,7 +47,7 @@ def get_expert_info(task, bool_return_path=True):
     th_w0 = 0.1
     th_w1 = 0.05
     th_w2 = 0.05
-    th_w3 = 0.05
+    th_w3 = 0.025
     th_w4 = 0.05
     th_w5 = 0.03
     is_grasping = len(task.robot.gripper.get_grasped_objects()) > 0
@@ -160,6 +160,7 @@ def get_expert_info(task, bool_return_path=True):
     expert_info = {
         "trajectory": torch.from_numpy(output),
         "stage": stage,
+        "open": open,
         "debug_info": {
             "tip_cur_position": tip_pose[:3],
             "tar_position": target_cup.get_position(),

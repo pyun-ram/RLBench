@@ -161,7 +161,7 @@ class PickMovingBallOnTheTableHighSpeed(Task):
                 min_acc_norm=0.05 if bool_a else 0,
             )
             color_choices = np.random.choice(
-            list(range(var_index)) + list(range(var_index + 1, len(colors))),
+            list(range(4)) + list(range(4 + 1, len(colors))),
             size=2, replace=False)
             self.boundary.clear()
             self.boundary.sample(

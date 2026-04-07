@@ -152,8 +152,8 @@ class PickMovingBallOnTheTable(Task):
                 min_acc_norm=0.01 if bool_a else 0,
             )
             color_choices = np.random.choice(
-            list(range(var_index)) + list(range(var_index + 1, len(colors))),
-            size=2, replace=False)
+            list(range(4)) + list(range(4 + 1, len(colors))),
+            size=2, replace=False) # blue is colors[4]
             self.boundary.clear()
             self.boundary.sample(
                 self.success_detector, min_rotation=(0.0, 0.0, 0.0),

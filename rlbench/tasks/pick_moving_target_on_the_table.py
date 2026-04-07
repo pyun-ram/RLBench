@@ -151,9 +151,7 @@ class PickMovingTargetOnTheTable(Task):
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,
             )
-            color_choices = np.random.choice(
-            list(range(var_index)) + list(range(var_index + 1, len(colors))),
-            size=2, replace=False)
+            color_choices = np.random.choice(list(range(1, len(colors))), size=2, replace=False)
             self.boundary.clear()
             self.boundary.sample(
                 self.success_detector, min_rotation=(0.0, 0.0, 0.0),

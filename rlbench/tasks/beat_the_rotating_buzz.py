@@ -179,7 +179,7 @@ class BeatTheRotatingBuzz(Task):
         self._frame_base = Shape('Cuboid')
         frame_base_z = self._frame_base.get_position()[2]
         self.wand = wand
-        self.area = [0, -0.5, frame_base_z, 0.4, 0.5, frame_base_z]
+        self.area = [0, -0.4, frame_base_z, 0.4, 0.4, frame_base_z]
         for var_index in range(self.variation_count()):
             yaw_speed = init_target_state(
                 min_yaw=2.5,  # 5 degree/s

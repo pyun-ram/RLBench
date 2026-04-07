@@ -26,6 +26,15 @@ class GripperOpenCondition(Condition):
         met = is_open
         return met, False
 
+class HasBeenPickedCondition(Condition):
+    def __init__(self, flag):
+        """in radians if revoloute, or meters if prismatic"""
+        self._flag = flag
+
+    def condition_met(self):
+        met = self._flag
+        return met, False
+
 def get_expert_info(task, bool_return_path=True):
     # reach -> pre-grasp -> grasp -> lift
     # reach: eepose: target_pose open: 1
@@ -178,11 +187,13 @@ class MovingBasketcubeInHoopHighSpeed(Task):
     def init_task(self):
         ball = Shape('ball')
         hoop = Shape('basket_ball_hoop_respondable')
+        self._has_been_picked = False
         self.register_graspable_objects([ball])
         self.register_success_conditions(
             [DetectedCondition(ball, ProximitySensor('success')),
              NothingGrasped(self.robot.gripper),
              GripperOpenCondition(self.robot.gripper),
+             HasBeenPickedCondition(self._has_been_picked),
              ])
         self.step_id = 0
         self.ball_area = [0.1, -0.5, 0.8, 0.2, 0.5, 0.8]
@@ -195,7 +206,6 @@ class MovingBasketcubeInHoopHighSpeed(Task):
         self.stage = 'wp0'
         self.ball = ball
         self.hoop = hoop
-        self._has_been_picked = False
         for var_index in range(self.variation_count()):
             self.var2target_state_list[var_index] = []
             bool_a = get_state_config(var_index)

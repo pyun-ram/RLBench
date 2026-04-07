@@ -12,6 +12,11 @@ from pyrep.objects import ProximitySensor, Shape, Dummy
 import torch
 from copy import deepcopy
 
+def handle_boundary(eepose, area):
+    xmin, ymin, _, xmax, ymax, _ = area
+    eepose[0] = np.clip(eepose[0], xmin, xmax)
+    eepose[1] = np.clip(eepose[1], ymin, ymax)
+    return eepose
 
 def cross_boundary(next_position: List[float], target: Shape, area: List[float]) -> Tuple[bool, int]:
     '''

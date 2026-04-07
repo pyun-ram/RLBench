@@ -3,7 +3,7 @@ from pyrep.objects.shape import Shape
 from pyrep.objects.joint import Joint
 from rlbench.backend.task import Task
 from rlbench.backend.conditions import JointCondition, ConditionSet
-from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary
+from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary, handle_boundary
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError, IKError
@@ -75,6 +75,7 @@ def get_expert_info(task, bool_return_path=True):
         eepose = wp1_pose.copy()
         eepose[:3] = wp_position
         eepose[2] -= 0.01
+        eepose = handle_boundary(eepose, task.area)
     elif stage == 'wp1':
         stage = 'wp1'
         open = 0
@@ -90,6 +91,7 @@ def get_expert_info(task, bool_return_path=True):
         eepose = wp1_pose.copy()
         eepose[:3] = wp_position
         eepose[2] -= 0.01
+        eepose = handle_boundary(eepose, task.area)
     else:
         print("Unrecognized stage: ", stage)
         import pdb
@@ -238,7 +240,6 @@ class PushMovingButtonHighSpeed(Task):
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-                import pdb; pdb.set_trace()
             if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
             if (self.step_id + 1) % 10 == 0:

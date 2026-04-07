@@ -10,7 +10,7 @@ from rlbench.backend.spawn_boundary import SpawnBoundary
 from rlbench.const import colors
 import torch
 from rlbench.backend.exceptions import InvalidActionError
-from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary
+from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary, handle_boundary
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from pyrep.errors import ConfigurationPathError
 from copy import deepcopy
@@ -64,6 +64,7 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             eepose = np.copy(target_pose)
             eepose[0:3] = predicted_position
             open = 1
+            eepose = handle_boundary(eepose, task.area)
         elif stage == 'grasp':
             predicted_position = compute_target_position(
                 t = t+t_delay,
@@ -79,6 +80,7 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             eepose[2] -= 0.015  # z-0.02 m
             eepose[3:7] = tip_pose[3:7]
             open = 0
+            eepose = handle_boundary(eepose, task.area)
         elif stage == 'lift':
             # lift: 使用目标块的当前位置，保持夹爪关闭
             succ_position = task.success_detector.get_position()

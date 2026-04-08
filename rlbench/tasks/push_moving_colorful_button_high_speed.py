@@ -63,7 +63,7 @@ def get_expert_info(task, bool_return_path=True):
     elif stage == 'wp0' and dist_to_wp0 <= th_wp0:
         stage = 'wp1'
         open = 0
-        t_delay = 0.5
+        t_delay = 0.25
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],
@@ -79,7 +79,7 @@ def get_expert_info(task, bool_return_path=True):
     elif stage == 'wp1':
         stage = 'wp1'
         open = 0
-        t_delay = 0.5
+        t_delay = 0.25
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],

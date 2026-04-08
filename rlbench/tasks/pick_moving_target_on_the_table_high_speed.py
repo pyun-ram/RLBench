@@ -37,16 +37,16 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             t_delay = 0.0 # s
         elif dist > th_pre_grasp:
             stage = 'pre-grasp'
-            t_delay = 1.0 # s
+            t_delay = 0.25 # s
         elif dist <= th_pre_grasp and not bool_grasp_succ:
             stage = 'grasp'
-            t_delay = 1.0 # s
+            t_delay = 0.25 # s
         elif bool_grasp_succ:
             stage = 'lift'
             t_delay = 0.0 # s
         else:
             stage = 'pre-grasp'
-            t_delay = 1.0
+            t_delay = 0.25
             
         if stage == 'reach':
             eepose = target_pose

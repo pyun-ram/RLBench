@@ -255,6 +255,20 @@ class Scene(object):
         front_mask = get_mask(self._cam_front_mask,
                               fc_mask_fn) if fc_ob.mask else None
 
+        gripper_open = None
+        if self._obs_config.gripper_open:
+            # When grasping an object, fingers may remain slightly open;
+            # still report this as "closed" to keep semantics consistent.
+            is_grasping = len(self.robot.gripper.get_grasped_objects()) > 0
+            if is_grasping:
+                gripper_open = 0.0
+            else:
+                gripper_open = (
+                    1.0
+                    if self.robot.gripper.get_open_amount()[0] > 0.9
+                    else 0.0
+                )
+
         obs = Observation(
             left_shoulder_rgb=left_shoulder_rgb,
             left_shoulder_depth=left_shoulder_depth,
@@ -286,9 +300,7 @@ class Scene(object):
                 if self._obs_config.joint_positions else None),
             joint_forces=(joint_forces
                           if self._obs_config.joint_forces else None),
-            gripper_open=(
-                (1.0 if self.robot.gripper.get_open_amount()[0] > 0.95 else 0.0) # Changed from 0.9 to 0.95 because objects, the gripper does not close completely
-                if self._obs_config.gripper_open else None),
+            gripper_open=gripper_open,
             gripper_pose=(
                 np.array(tip.get_pose())
                 if self._obs_config.gripper_pose else None),

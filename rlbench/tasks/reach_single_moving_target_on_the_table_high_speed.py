@@ -12,8 +12,12 @@ from pyrep.objects import ProximitySensor, Shape, Dummy
 import torch
 from copy import deepcopy
 
-def handle_boundary(eepose, area):
+def handle_boundary(eepose, area, buffer = 0.03):
     xmin, ymin, _, xmax, ymax, _ = area
+    xmin -= buffer
+    ymin -= buffer
+    xmax += buffer
+    ymax += buffer
     eepose[0] = np.clip(eepose[0], xmin, xmax)
     eepose[1] = np.clip(eepose[1], ymin, ymax)
     return eepose

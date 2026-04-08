@@ -45,9 +45,7 @@ def get_expert_info(task, bool_return_path=True):
     # grasp: eepose: compute_target_position(t+t_delay 0.5s) (z+0.05 m) rotation: target pose rotation open: 0
     # lift: eepose: pick_and_lift_target.get_pose() position  open: 0
     wp0_pose = task.wp0.get_pose()
-    wp0_init_pose = task.wp0_init_pose
     wp1_pose = task.wp1.get_pose()
-    wp1_init_pose = task.wp1_init_pose
     tip_pose = task.robot.arm.get_tip().get_pose()
     dist_to_wp0 = np.linalg.norm(tip_pose[:3] - wp0_pose[:3])
     th_wp0 = 0.3  # m
@@ -67,13 +65,13 @@ def get_expert_info(task, bool_return_path=True):
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],
-            x0=wp1_init_pose[:3],
+            x0=target_state_dict['x'],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
             dt=simulation_timestep,
         )
         eepose = wp1_pose.copy()
-        eepose[:3] = wp_position
+        eepose[:2] = wp_position[:2]
         eepose[2] -= 0.01
         eepose = handle_boundary(eepose, task.area)
     elif stage == 'wp1':
@@ -83,13 +81,13 @@ def get_expert_info(task, bool_return_path=True):
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],
-            x0=wp1_init_pose[:3],
+            x0=target_state_dict['x'],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
             dt=simulation_timestep,
         )
         eepose = wp1_pose.copy()
-        eepose[:3] = wp_position
+        eepose[:2] = wp_position[:2]
         eepose[2] -= 0.01
         eepose = handle_boundary(eepose, task.area)
     else:

@@ -67,13 +67,13 @@ def get_expert_info(task, bool_return_path=True):
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],
-            x0=wp1_init_pose[:3],
+            x0=target_state_dict['x'],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
             dt=simulation_timestep,
         )
         eepose = wp1_pose.copy()
-        eepose[:3] = wp_position
+        eepose[:2] = wp_position[:2]
         eepose[2] -= 0.01
     elif stage == 'wp1':
         stage = 'wp1'
@@ -82,13 +82,13 @@ def get_expert_info(task, bool_return_path=True):
         wp_position = compute_target_position(
             t=task.t+t_delay,
             t0=target_state_dict['t0'],
-            x0=wp1_init_pose[:3],
+            x0=target_state_dict['x'],
             v0=target_state_dict["v"],
             a0=target_state_dict["a"],
             dt=simulation_timestep,
         )
         eepose = wp1_pose.copy()
-        eepose[:3] = wp_position
+        eepose[:2] = wp_position[:2]
         eepose[2] -= 0.01
     else:
         print("Unrecognized stage: ", stage)

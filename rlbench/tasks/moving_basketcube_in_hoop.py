@@ -26,12 +26,12 @@ class GripperOpenCondition(Condition):
         return met, False
 
 class HasBeenPickedCondition(Condition):
-    def __init__(self, flag):
+    def __init__(self, flag_getter):
         """in radians if revoloute, or meters if prismatic"""
-        self._flag = flag
+        self._flag_getter = flag_getter
 
     def condition_met(self):
-        met = self._flag
+        met = self._flag_getter()
         return met, False
 
 def get_expert_info(task, bool_return_path=True):
@@ -178,7 +178,7 @@ class MovingBasketcubeInHoop(Task):
             [DetectedCondition(ball, ProximitySensor('success')),
              NothingGrasped(self.robot.gripper),
              GripperOpenCondition(self.robot.gripper),
-             HasBeenPickedCondition(self._has_been_picked),
+             HasBeenPickedCondition(lambda: self._has_been_picked),
              ])
         self.step_id = 0
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]

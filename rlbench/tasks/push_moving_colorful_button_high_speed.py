@@ -132,7 +132,16 @@ class PushMovingColorfulButtonHighSpeed(Task):
         self.target_wrap = Shape('target_button_wrap')
         self.goal_condition = JointCondition(self.joint, 0.003)
         self.step_id = 0
+        target_size_xy = [0.15, 0.15]
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
+        self.area = [
+            self.area[0]+target_size_xy[0]/2,
+            self.area[1]+target_size_xy[1]/2,
+            self.area[2],
+            self.area[3]-target_size_xy[0]/2,
+            self.area[4]-target_size_xy[1]/2,
+            self.area[5],
+        ]
         self.t_max = 1  # (s)
         self.t = 0
         self.target_state_list = []
@@ -240,7 +249,6 @@ class PushMovingColorfulButtonHighSpeed(Task):
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-                import pdb; pdb.set_trace()
             if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
             if (self.step_id + 1) % 10 == 0:

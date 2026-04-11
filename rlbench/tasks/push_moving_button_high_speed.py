@@ -130,7 +130,7 @@ class PushMovingButtonHighSpeed(Task):
         self.target_wrap = Shape('target_button_wrap')
         self.goal_condition = JointCondition(self.joint, 0.003)
         self.step_id = 0
-        target_size_xy = [0.17, 0.17]
+        target_size_xy = [0.15, 0.15]
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
         self.area = [
             self.area[0]+target_size_xy[0]/2,

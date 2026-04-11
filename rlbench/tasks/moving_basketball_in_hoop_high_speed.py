@@ -197,7 +197,7 @@ class MovingBasketballInHoopHighSpeed(Task):
              ])
         self.step_id = 0
         target_size_xy = [0.05, 0.05]
-        self.ball_area = [0.1, -0.5, 0.8, 0.2, 0.5, 0.8]
+        self.ball_area = [0, -0.5, 0.8, 0.3, 0.5, 0.8]
         self.ball_area = [
             self.ball_area[0]+target_size_xy[0]/2,
             self.ball_area[1]+target_size_xy[1]/2,
@@ -207,7 +207,7 @@ class MovingBasketballInHoopHighSpeed(Task):
             self.ball_area[5],
         ]
         target_size_xy = [0.05, 0.05]
-        self.hoop_area = [0.3, -0.5, 0.8, 0.4, 0.5, 0.8]
+        self.hoop_area = [0.4, -0.5, 0.8, 0.6, 0.5, 0.8]
         self.hoop_area = [
             self.hoop_area[0]+target_size_xy[0]/2,
             self.hoop_area[1]+target_size_xy[1]/2,

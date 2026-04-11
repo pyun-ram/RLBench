@@ -130,7 +130,16 @@ class PushMovingButton(Task):
         self.target_wrap = Shape('target_button_wrap')
         self.goal_condition = JointCondition(self.joint, 0.003)
         self.step_id = 0
+        target_size_xy = [0.17, 0.17]
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
+        self.area = [
+            self.area[0]+target_size_xy[0]/2,
+            self.area[1]+target_size_xy[1]/2,
+            self.area[2],
+            self.area[3]-target_size_xy[0]/2,
+            self.area[4]-target_size_xy[1]/2,
+            self.area[5],
+        ]
         self.t_max = 1  # (s)
         self.t = 0
         self.target_state_list = []

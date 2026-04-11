@@ -143,6 +143,15 @@ class PutRubbishInMovingBinHighSpeed(Task):
         self.wp3 = Dummy('waypoint3')
         self.step_id = 0
         self.area = [0.15, -0.5, 0.85, 0.4, 0.5, 0.85]
+        target_size_xy = [0.23, 0.23]
+        self.area = [
+            self.area[0]+target_size_xy[0]/2,
+            self.area[1]+target_size_xy[1]/2,
+            self.area[2],
+            self.area[3]-target_size_xy[0]/2,
+            self.area[4]-target_size_xy[1]/2,
+            self.area[5],
+        ]
         self.t_max = 1 # (s)
         self.step_id = 0
         self.t = 0

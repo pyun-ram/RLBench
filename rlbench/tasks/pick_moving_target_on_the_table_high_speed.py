@@ -37,16 +37,16 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             t_delay = 0.0 # s
         elif dist > th_pre_grasp:
             stage = 'pre-grasp'
-            t_delay = 0.25 # s
+            t_delay = 0.5 # s
         elif dist <= th_pre_grasp and not bool_grasp_succ:
             stage = 'grasp'
-            t_delay = 0.25 # s
+            t_delay = 0.5 # s
         elif bool_grasp_succ:
             stage = 'lift'
             t_delay = 0.0 # s
         else:
             stage = 'pre-grasp'
-            t_delay = 0.25
+            t_delay = 0.5
             
         if stage == 'reach':
             eepose = target_pose
@@ -136,8 +136,17 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
         ])
         self.register_success_conditions([cond_set])
         self.step_id = 0
+        target_size_xy = [0.10, 0.10]
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 1 # (s)
+        self.area = [
+            self.area[0]+target_size_xy[0]/2,
+            self.area[1]+target_size_xy[1]/2,
+            self.area[2],
+            self.area[3]-target_size_xy[0]/2,
+            self.area[4]-target_size_xy[1]/2,
+            self.area[5],
+        ]
+        self.t_max = 0.5 # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True

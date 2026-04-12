@@ -6,7 +6,7 @@ from pyrep.objects.proximity_sensor import ProximitySensor
 from pyrep.objects.shape import Shape
 from rlbench.backend.conditions import DetectedCondition, NothingGrasped, Condition
 from rlbench.backend.task import Task
-from .reach_single_moving_target_on_the_table import get_state_config, init_target_state, compute_target_position
+from .reach_single_moving_target_on_the_table_high_speed import get_state_config, init_target_state, compute_target_position, cross_boundary
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
 from pyrep.errors import ConfigurationPathError, IKError
@@ -14,6 +14,7 @@ import torch
 import numpy as np
 from pyrep.objects.dummy import Dummy
 from pyrep.backend import sim, utils
+from copy import deepcopy
 
 class GripperOpenCondition(Condition):
     def __init__(self, gripper):
@@ -56,7 +57,7 @@ def get_expert_info(task, bool_return_path=True):
     th_w1 = 0.03  # m
     th_w3 = 0.03  # m
     simulation_timestep = task.pyrep.get_simulation_timestep()
-    target_state_dict = task.target_state_list[-1][0]
+    ball_target_state_dict = task.target_state_list[-1][0]
     hoop_target_state_dict = task.target_state_list[-1][1]
     stage = task.stage
     is_open = all(x > 0.9 for x in task.robot.gripper.get_open_amount())
@@ -70,78 +71,92 @@ def get_expert_info(task, bool_return_path=True):
         stage = 'wp0'
         t_delay = 0.0
         eepose = w0_pose
+        eepose[3:7] = np.array([0, 1, 0, 0])
         open = 1
     elif stage == 'wp0' and dist_to_w0 <= th_w0:
         stage = 'wp1'
         t_delay = 0.5
-        eepose = w1_pose
+        eepose = w0_pose
         eepose[:3] = compute_target_position(
-            t = task.t+t_delay,
-            t0=0,
-            x0=w1_init_pose[:3],
-            v0=target_state_dict["v"],
-            a0=target_state_dict["a"],
+            t=task.t+t_delay,
+            t0=ball_target_state_dict["t0"],
+            x0=ball_target_state_dict["x"],
+            v0=ball_target_state_dict["v"],
+            a0=ball_target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=False,
         )
+        eepose[3:7] = np.array([0, 1, 0, 0])
         open = 0
     elif stage == 'wp1' and dist_to_w1 > th_w1:
         stage = 'wp1'
         t_delay = 0.5
         eepose = w1_pose
         eepose[:3] = compute_target_position(
-            t = task.t+t_delay,
-            t0=0,
-            x0=w1_init_pose[:3],
-            v0=target_state_dict["v"],
-            a0=target_state_dict["a"],
+            t=task.t+t_delay,
+            t0=ball_target_state_dict["t0"],
+            x0=ball_target_state_dict["x"],
+            v0=ball_target_state_dict["v"],
+            a0=ball_target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=False,
         )
+        eepose[3:7] = np.array([0, 1, 0, 0])
         open = 0
     elif stage == 'wp1' and dist_to_w1 <= th_w1 and is_open:
         stage = 'wp1'
         t_delay = 0.5
         eepose = w1_pose
         eepose[:3] = compute_target_position(
-            t = task.t+t_delay,
-            t0=0,
-            x0=w1_init_pose[:3],
-            v0=target_state_dict["v"],
-            a0=target_state_dict["a"],
+            t=task.t+t_delay,
+            t0=ball_target_state_dict["t0"],
+            x0=ball_target_state_dict["x"],
+            v0=ball_target_state_dict["v"],
+            a0=ball_target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=False,
         )
+        eepose[3:7] = np.array([0, 1, 0, 0])
         open = 0
     elif stage == 'wp1' and not is_open:
         stage = 'wp2'
         t_delay = 0.5
         eepose = tip_pose
-        eepose[2] += 0.3
+        eepose[2] += 0.1
+        eepose[3:7] = np.array([0, 1, 0, 0])
         open = 0
     elif stage in ['wp2', 'wp3'] and dist_to_w3 > th_w3:
         stage = 'wp3'
         t_delay = 0.5
         eepose = w3_pose
-        eepose[:3] = compute_target_position(
-            t = task.t+t_delay,
-            t0=0,
-            x0=w3_init_pose[:3],
+        hoop_target_position, hoop_target_velocity = compute_target_position(
+            t=task.t+t_delay,
+            t0=hoop_target_state_dict["t0"],
+            x0=hoop_target_state_dict["wp3_x"],
             v0=hoop_target_state_dict["v"],
             a0=hoop_target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=True,
         )
+        eepose[:3] = hoop_target_position
+        eepose[3:7] = np.array([0, 1, 0, 0])
         open = 0
     elif stage == 'wp3' and dist_to_w3 <= th_w3:
         stage = 'wp3'
         t_delay = 0.5
         eepose = w3_pose
-        eepose[:3] = compute_target_position(
-            t = task.t+t_delay,
-            t0=0,
-            x0=w3_init_pose[:3],
+        hoop_target_position, hoop_target_velocity = compute_target_position(
+            t=task.t+t_delay,
+            t0=hoop_target_state_dict["t0"],
+            x0=hoop_target_state_dict["wp3_x"],
             v0=hoop_target_state_dict["v"],
             a0=hoop_target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=True,
         )
+        eepose[:3] = hoop_target_position
         open = 1
+        eepose[3:7] = np.array([0, 1, 0, 0])
     else:
         print("Unrecognized stage: ", stage)
         import pdb; pdb.set_trace()
@@ -181,8 +196,27 @@ class MovingBasketcubeInHoop(Task):
              HasBeenPickedCondition(lambda: self._has_been_picked),
              ])
         self.step_id = 0
-        self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 6.5  # (s)
+        target_size_xy = [0.05, 0.05]
+        self.ball_area = [0, -0.5, 0.8, 0.3, 0.5, 0.8]
+        self.ball_area = [
+            self.ball_area[0]+target_size_xy[0]/2,
+            self.ball_area[1]+target_size_xy[1]/2,
+            self.ball_area[2],
+            self.ball_area[3]-target_size_xy[0]/2,
+            self.ball_area[4]-target_size_xy[1]/2,
+            self.ball_area[5],
+        ]
+        target_size_xy = [0.15, 0.05]
+        self.hoop_area = [0.3, -0.5, 0.8, 0.6, 0.5, 0.8]
+        self.hoop_area = [
+            self.hoop_area[0]+target_size_xy[0]/2,
+            self.hoop_area[1]+target_size_xy[1]/2,
+            self.hoop_area[2],
+            self.hoop_area[3]-target_size_xy[0]/2,
+            self.hoop_area[4]-target_size_xy[1]/2,
+            self.hoop_area[5],
+        ]
+        self.t_max = 0.5  # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True
@@ -196,8 +230,8 @@ class MovingBasketcubeInHoop(Task):
             # ball target state
             x, v, a = init_target_state(
                 t_max=self.t_max,
-                area=self.area,
-                x_range=self.area,
+                area=self.ball_area,
+                x_range=self.ball_area,
                 v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
                 a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
                 x0=None,
@@ -217,8 +251,8 @@ class MovingBasketcubeInHoop(Task):
             # hoop target state
             x, v, a = init_target_state(
                 t_max=self.t_max,
-                area=self.area,
-                x_range=self.area,
+                area=self.hoop_area,
+                x_range=self.hoop_area,
                 v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
                 a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
                 x0=None,
@@ -249,6 +283,10 @@ class MovingBasketcubeInHoop(Task):
         self.cleanup()
         self.ball.set_position(ball_target_state['x'])
         self.hoop.set_position(hoop_target_state['x'])
+        self.wp0 = Dummy('expertwp0')
+        self.wp1 = Dummy('expertwp1')
+        self.wp2 = Dummy('expertwp2')
+        self.wp3 = Dummy('expertwp3')
         self.target_state_list.append(({
             "x": ball_target_state['x'],
             "v": ball_target_state['v'],
@@ -259,22 +297,19 @@ class MovingBasketcubeInHoop(Task):
             "v": hoop_target_state['v'],
             "a": hoop_target_state['a'],
             "t0": 0,
+            "wp3_x": self.wp3.get_position()[:3],
         }))
         self.step_id = 0
         self.t = 0
-        self.wp0 = Dummy('expertwp0')
-        self.wp1 = Dummy('expertwp1')
-        self.wp2 = Dummy('expertwp2')
-        self.wp3 = Dummy('expertwp3')
-        self.wp1_init_pose = self.wp1.get_pose()
-        self.wp3_init_pose = self.wp3.get_pose()
+        self.wp1_init_pose = self.wp1.get_pose().copy()
+        self.wp3_init_pose = self.wp3.get_pose().copy()
         self._has_been_picked = False
-        return ['put the ball in the hoop',
-                'play basketball',
-                'shoot the ball through the net',
-                'pick up the basketball and put it in the hoop',
-                'throw the basketball through the hoop',
-                'place the basket ball through the hoop']
+        return ['put the ball in the hoop (high speed)',
+                'play basketball (high speed)',
+                'shoot the ball through the net (high speed)',
+                'pick up the basketball and put it in the hoop (high speed)',
+                'throw the basketball through the hoop (high speed)',
+                'place the basket ball through the hoop (high speed)']
 
     def check_grasp_success(self):
         grasped_objects = self.robot.gripper.get_grasped_objects()
@@ -285,26 +320,57 @@ class MovingBasketcubeInHoop(Task):
         ball_target_state_dict = self.target_state_list[-1][0]
         hoop_target_state_dict = self.target_state_list[-1][1]
         if not self.check_grasp_success() and not self._has_been_picked:
-            ball_target_position = compute_target_position(
+            ball_target_position, ball_target_velocity = compute_target_position(
                 t=self.t,
                 t0=ball_target_state_dict["t0"],
                 x0=ball_target_state_dict["x"],
                 v0=ball_target_state_dict["v"],
                 a0=ball_target_state_dict["a"],
                 dt=simulation_timestep,
+                bool_return_velocity=True,
             )
-            self.ball.set_position(ball_target_position)
+            bool_cross, boundary_index = cross_boundary(ball_target_position, self.ball, self.ball_area)
+            if not bool_cross:
+                self.ball.set_position(ball_target_position)
+            else:
+                self.ball.set_position(ball_target_position)
+                new_ball_target_velocity = deepcopy(ball_target_velocity)
+                for itm in boundary_index:
+                    new_ball_target_velocity[itm] = - new_ball_target_velocity[itm]
+                ball_target_state_dict = {
+                    "t0": self.t,
+                    "x": ball_target_position,
+                    "v": new_ball_target_velocity,
+                    "a": ball_target_state_dict["a"],
+                }
+                self.target_state_list.append((ball_target_state_dict, hoop_target_state_dict))
         else:
             self._has_been_picked = True
-        hoop_target_position = compute_target_position(
+        hoop_target_position, hoop_target_velocity = compute_target_position(
             t=self.t,
             t0=hoop_target_state_dict["t0"],
             x0=hoop_target_state_dict["x"],
             v0=hoop_target_state_dict["v"],
             a0=hoop_target_state_dict["a"],
             dt=simulation_timestep,
+            bool_return_velocity=True,
         )
-        self.hoop.set_position(hoop_target_position)
+        bool_cross, boundary_index = cross_boundary(hoop_target_position, self.hoop, self.hoop_area)
+        if not bool_cross:
+            self.hoop.set_position(hoop_target_position)
+        else:
+            self.hoop.set_position(hoop_target_position)
+            new_hoop_target_velocity = deepcopy(hoop_target_velocity)
+            for itm in boundary_index:
+                new_hoop_target_velocity[itm] = - new_hoop_target_velocity[itm]
+            hoop_target_state_dict = {
+                "t0": self.t,
+                "x": hoop_target_position,
+                "v": new_hoop_target_velocity,
+                "a": hoop_target_state_dict["a"],
+                "wp3_x": self.wp3.get_position()[:3],
+            }
+            self.target_state_list.append((ball_target_state_dict, hoop_target_state_dict))
         if self._bool_expert:
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
@@ -490,7 +556,7 @@ class MovingBasketcubeInHoop(Task):
 
 
     def variation_count(self) -> int:
-        return 1
+        return 2
 
     def base_rotation_bounds(self) -> Tuple[List[float], List[float]]:
         return [0, 0, -np.pi / 4], [0, 0, np.pi / 4]

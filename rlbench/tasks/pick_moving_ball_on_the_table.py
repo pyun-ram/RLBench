@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import numpy as np
 from pyrep.objects.shape import Shape
 from pyrep.objects.dummy import Dummy
@@ -10,9 +10,11 @@ from rlbench.backend.spawn_boundary import SpawnBoundary
 from rlbench.const import colors
 import torch
 from rlbench.backend.exceptions import InvalidActionError
-from .reach_single_moving_target_on_the_table import get_state_config, compute_target_position, init_target_state
+from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary, handle_boundary
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from pyrep.errors import ConfigurationPathError
+from copy import deepcopy
+
 
 def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True):
         # reach -> pre-grasp -> grasp -> lift
@@ -35,16 +37,16 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             t_delay = 0.0 # s
         elif dist > th_pre_grasp:
             stage = 'pre-grasp'
-            t_delay = 1.0 # s
+            t_delay = 0.25 # s
         elif dist <= th_pre_grasp and not bool_grasp_succ:
             stage = 'grasp'
-            t_delay = 0.5 # s
+            t_delay = 0.25 # s
         elif bool_grasp_succ:
             stage = 'lift'
             t_delay = 0.0 # s
         else:
             stage = 'pre-grasp'
-            t_delay = 1.0
+            t_delay = 0.25
             
         if stage == 'reach':
             eepose = target_pose
@@ -62,6 +64,7 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             eepose = np.copy(target_pose)
             eepose[0:3] = predicted_position
             open = 1
+            eepose = handle_boundary(eepose, task.area)
         elif stage == 'grasp':
             predicted_position = compute_target_position(
                 t = t+t_delay,
@@ -74,9 +77,10 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             # 构造eepose: position (z-0.02m) + rotation from target_pose; open = 0
             eepose = np.copy(target_pose)
             eepose[0:3] = predicted_position
-            # eepose[2] -= 0.02  # z-0.02 m
+            eepose[2] -= 0.015  # z-0.02 m
             eepose[3:7] = tip_pose[3:7]
             open = 0
+            eepose = handle_boundary(eepose, task.area)
         elif stage == 'lift':
             # lift: 使用目标块的当前位置，保持夹爪关闭
             succ_position = task.success_detector.get_position()
@@ -84,7 +88,7 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             eepose[0:3] = succ_position
             eepose[3:7] = [0,1,0,0]
             open = 0
-        
+        # eepose = task.robot.arm.get_tip().get_pose()
         print(f"stage: {stage}, eepose: {eepose}, open: {open}, dist: {dist}")
         output = np.ones((1,1,8))
         output[0,0,:7] = eepose
@@ -92,6 +96,7 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
         expert_info = {
             "trajectory": torch.from_numpy(output),
             "stage": stage,
+            "open": open,
             "debug_info": {
                 "tip_cur_position": tip_pose[:3],
                 "tar_position": target_pose[:3],
@@ -99,7 +104,11 @@ def get_expert_info(task, th_reach=0.4, th_pre_grasp=0.2, bool_return_path=True)
             }
         }
         if bool_return_path:
-            path = task.get_path(eepose)
+            try:
+                path = task.get_path(eepose)
+            except:
+                path = None
+                print(f"path is None")
             expert_info["path"] = path
         return expert_info
 
@@ -137,7 +146,7 @@ class PickMovingBallOnTheTable(Task):
             self.area[4]-target_size_xy[1]/2,
             self.area[5],
         ]
-        self.t_max = 6.5 # (s)
+        self.t_max = 1 # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True
@@ -162,7 +171,7 @@ class PickMovingBallOnTheTable(Task):
             )
             color_choices = np.random.choice(
             list(range(4)) + list(range(4 + 1, len(colors))),
-            size=2, replace=False) # blue is colors[4]
+            size=2, replace=False)
             self.boundary.clear()
             self.boundary.sample(
                 self.success_detector, min_rotation=(0.0, 0.0, 0.0),
@@ -177,6 +186,11 @@ class PickMovingBallOnTheTable(Task):
                 'success_detector_pose': self.success_detector.get_pose(),
                 'distractors_poses': [block.get_pose() for block in self.distractors],
             }
+        # import pickle
+        # with open('var2target_state_list.pkl', 'wb') as f:
+        #     pickle.dump(self.var2target_state_list, f)
+        # with open('var2target_state_list.pkl', 'rb') as f:
+        #     self.var2target_state_list = pickle.load(f)
         return
 
     def init_episode(self, index: int) -> List[str]:
@@ -211,22 +225,37 @@ class PickMovingBallOnTheTable(Task):
         simulation_timestep = self.pyrep.get_simulation_timestep()
         if not self.check_grasp_success():
             target_state_dict = self.target_state_list[-1]
-            target_position = compute_target_position(
+            target_position, target_velocity = compute_target_position(
                 t=self.t,
                 t0=target_state_dict["t0"],
                 x0=target_state_dict["x"],
                 v0=target_state_dict["v"],
                 a0=target_state_dict["a"],
                 dt=simulation_timestep,
+                bool_return_velocity=True,
             )
-            self.target_block.set_position(target_position)
+            bool_cross, boundary_index = cross_boundary(target_position, self.target_block, self.area)
+            if not bool_cross:
+                self.target_block.set_position(target_position)
+            else:
+                self.target_block.set_position(target_position)
+                new_target_velocity = deepcopy(target_velocity)
+                for itm in boundary_index:
+                    new_target_velocity[itm] = - new_target_velocity[itm]
+                target_state_dict = {
+                    "t0": self.t,
+                    "x": target_position,
+                    "v": new_target_velocity,
+                    "a": target_state_dict["a"],
+                }
+                self.target_state_list.append(target_state_dict)
         if self._bool_expert:
             if self.step_id % 10 == 0:
                 self._path, self._open = self.expert_plan()
                 self._path_done = False
-            if not self._path_done:
+            if self._path is not None and not self._path_done:
                 self._path_done = self._path.step()
-            if self._path_done:
+            if (self.step_id + 1) % 10 == 0:
                 self.move_gripper_tip([self._open])
         self.step_id += 1
         self.t += simulation_timestep
@@ -337,3 +366,7 @@ class PickMovingBallOnTheTable(Task):
 
     def is_static_workspace(self):
         return True
+    
+    def set_target_color(self, color: List[float]):
+        self.target_block.set_color(color)
+        return

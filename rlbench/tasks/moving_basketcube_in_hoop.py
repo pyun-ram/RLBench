@@ -304,12 +304,12 @@ class MovingBasketcubeInHoop(Task):
         self.wp1_init_pose = self.wp1.get_pose().copy()
         self.wp3_init_pose = self.wp3.get_pose().copy()
         self._has_been_picked = False
-        return ['put the ball in the hoop (high speed)',
-                'play basketball (high speed)',
-                'shoot the ball through the net (high speed)',
-                'pick up the basketball and put it in the hoop (high speed)',
-                'throw the basketball through the hoop (high speed)',
-                'place the basket ball through the hoop (high speed)']
+        return ['put the ball in the hoop',
+                'play basketball',
+                'shoot the ball through the net',
+                'pick up the basketball and put it in the hoop',
+                'throw the basketball through the hoop',
+                'place the basket ball through the hoop']
 
     def check_grasp_success(self):
         grasped_objects = self.robot.gripper.get_grasped_objects()

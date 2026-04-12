@@ -196,9 +196,27 @@ class MovingColorfulBasketballInHoopHighSpeed(Task):
              HasBeenPickedCondition(self._has_been_picked),
              ])
         self.step_id = 0
-        self.ball_area = [0.1, -0.5, 0.8, 0.2, 0.5, 0.8]
-        self.hoop_area = [0.3, -0.5, 0.8, 0.4, 0.5, 0.8]
-        self.t_max = 1  # (s)
+        target_size_xy = [0.05, 0.05]
+        self.ball_area = [0, -0.5, 0.8, 0.3, 0.5, 0.8]
+        self.ball_area = [
+            self.ball_area[0]+target_size_xy[0]/2,
+            self.ball_area[1]+target_size_xy[1]/2,
+            self.ball_area[2],
+            self.ball_area[3]-target_size_xy[0]/2,
+            self.ball_area[4]-target_size_xy[1]/2,
+            self.ball_area[5],
+        ]
+        target_size_xy = [0.15, 0.05]
+        self.hoop_area = [0.3, -0.5, 0.8, 0.6, 0.5, 0.8]
+        self.hoop_area = [
+            self.hoop_area[0]+target_size_xy[0]/2,
+            self.hoop_area[1]+target_size_xy[1]/2,
+            self.hoop_area[2],
+            self.hoop_area[3]-target_size_xy[0]/2,
+            self.hoop_area[4]-target_size_xy[1]/2,
+            self.hoop_area[5],
+        ]
+        self.t_max = 0.5  # (s)
         self.t = 0
         self.target_state_list = []
         self._bool_expert = True

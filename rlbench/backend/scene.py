@@ -265,7 +265,7 @@ class Scene(object):
             else:
                 gripper_open = (
                     1.0
-                    if self.robot.gripper.get_open_amount()[0] > 0.9
+                    if self.robot.gripper.get_open_amount()[0] > 0.5
                     else 0.0
                 )
 

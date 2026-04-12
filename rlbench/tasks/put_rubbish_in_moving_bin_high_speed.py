@@ -172,7 +172,7 @@ class PutRubbishInMovingBinHighSpeed(Task):
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
-                dv=[0.025, 0.025, 0.025],
+                dv=[0.0249, 0.0249, 0.0249],
                 da=[0.02, 0.02, 0.02],
                 min_velo_norm=0.1,
                 min_acc_norm=0.02 if bool_a else 0,

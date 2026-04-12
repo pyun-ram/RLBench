@@ -160,7 +160,7 @@ class PutRubbishInMovingBin(Task):
             self.area[4]-target_size_xy[1]/2,
             self.area[5],
         ]
-        self.t_max = 6.5 # (s)
+        self.t_max = 1 # (s)
         self.step_id = 0
         self.t = 0
         self.target_state_list = []
@@ -180,7 +180,7 @@ class PutRubbishInMovingBin(Task):
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
-                dv=[0.025, 0.025, 0.025],
+                dv=[0.0249, 0.0249, 0.0249],
                 da=[0.001, 0.001, 0.001],
                 min_velo_norm=0.03,
                 min_acc_norm=0.01 if bool_a else 0,

@@ -1,8 +1,9 @@
 from typing import List
+from collections import deque
 from pyrep.objects.shape import Shape
 from pyrep.objects.joint import Joint
 from rlbench.backend.task import Task
-from rlbench.backend.conditions import JointCondition, ConditionSet
+from rlbench.backend.conditions import JointCondition, ConditionSet, Condition
 from .reach_single_moving_target_on_the_table_high_speed import get_state_config, compute_target_position, init_target_state, cross_boundary, handle_boundary
 from pyrep.const import ConfigurationPathAlgorithms as Algos
 from rlbench.backend.exceptions import InvalidActionError
@@ -36,6 +37,23 @@ colors = [
     ('black', (0.0, 0.0, 0.0)),
     ('white', (1.0, 1.0, 1.0)),
 ]
+
+
+class GripperDescendingCondition(Condition):
+    """最近 window 步内 tip_z 下降超过 min_descent 则满足。"""
+
+    def __init__(self, z_history_getter, window=10, min_descent=0.03):
+        self._z_history_getter = z_history_getter
+        self._window = window
+        self._min_descent = min_descent
+
+    def condition_met(self):
+        history = list(self._z_history_getter())
+        if len(history) < self._window:
+            return False, False
+        recent = history[-self._window:]
+        descent = recent[0] - recent[-1]
+        return descent > self._min_descent, False
 
 
 def get_expert_info(task, bool_return_path=True):
@@ -129,6 +147,9 @@ class PushMovingButtonHighSpeed(Task):
         self.joint.set_joint_position(-0.0026)
         self.target_wrap = Shape('target_button_wrap')
         self.goal_condition = JointCondition(self.joint, 0.003)
+        self._tip_z_history = deque(maxlen=10)
+        self.descent_condition = GripperDescendingCondition(
+            lambda: self._tip_z_history)
         self.step_id = 0
         target_size_xy = [0.15, 0.15]
         self.area = [0, -0.5, 0.8, 0.4, 0.5, 0.8]
@@ -184,8 +205,12 @@ class PushMovingButtonHighSpeed(Task):
         self.variation_index = index
         button_color_name, button_rgb = colors[0]
         self.target_button.set_color(button_rgb)
-        self.register_success_conditions(
-            [ConditionSet([self.goal_condition], True, False)])
+        self.register_success_conditions([
+            ConditionSet([
+                self.goal_condition,
+                self.descent_condition,
+            ], order_matters=False, simultaneously_met=True)
+        ])
         self.var_index = index
         target_state = self.var2target_state_list[self.var_index][0]
         target_state["x"][-1] = self.target_button.get_position()[-1]
@@ -213,6 +238,8 @@ class PushMovingButtonHighSpeed(Task):
 
     def step(self) -> None:
         simulation_timestep = self.pyrep.get_simulation_timestep()
+        tip_z = self.robot.arm.get_tip().get_position()[2]
+        self._tip_z_history.append(tip_z)
         if self.goal_condition.condition_met() == (True, True):
             self.target_topPlate.set_color([0.0, 1.0, 0.0])
             self.target_wrap.set_color([0.0, 1.0, 0.0])
@@ -434,5 +461,6 @@ class PushMovingButtonHighSpeed(Task):
         self.t = 0
         self.stage = 'wp0'
         self.joint.set_joint_position(self.botton_init_position)
+        self._tip_z_history.clear()
         [itm.reset() for itm in self._success_conditions]
         return

@@ -158,16 +158,16 @@ class PickMovingTargetOnTheTableHighSpeed(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-1, -1, 0, 1, 1, 0],
-                a_range=[-0.5, -0.5, 0, 0.5, 0.5, 0],
+                v_range=[-0.8, -0.8, 0, 0.8, 0.8, 0],
+                a_range=[-0.4, -0.4, 0, 0.4, 0.4, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.025, 0.025, 0.025],
-                da=[0.2, 0.2, 0.2],
-                min_velo_norm=0.4,
-                min_acc_norm=0.05 if bool_a else 0,
+                da=[0.1, 0.1, 0.1],
+                min_velo_norm=0.3,
+                min_acc_norm=0.04 if bool_a else 0,
             )
             color_choices = np.random.choice(list(range(1, len(colors))), size=2, replace=False)
             self.boundary.clear()

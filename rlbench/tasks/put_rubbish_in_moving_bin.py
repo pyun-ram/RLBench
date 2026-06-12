@@ -174,16 +174,16 @@ class PutRubbishInMovingBin(Task):
                 t_max=self.t_max,
                 area=self.area,
                 x_range=self.area,
-                v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
-                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                v_range=[-0.25, -0.25, 0, 0.25, 0.25, 0],
+                a_range=[-0.013, -0.013, 0, 0.013, 0.013, 0],
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
                 dx=[0.05, 0.05, 0.05],
                 dv=[0.0249, 0.0249, 0.0249],
                 da=[0.001, 0.001, 0.001],
-                min_velo_norm=0.03,
-                min_acc_norm=0.01 if bool_a else 0,
+                min_velo_norm=0.04,
+                min_acc_norm=0.013 if bool_a else 0,
             )
             frame_dx_dy = get_unoverlapped_frame_dx_dy(n=3, x_range=[0.05, 0.12], y_range=[-0.4, 0.4])
             tomato1 = Shape('tomato1')

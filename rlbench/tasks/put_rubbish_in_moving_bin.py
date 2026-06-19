@@ -12,6 +12,20 @@ from pyrep.objects.dummy import Dummy
 import torch
 from copy import deepcopy
 
+class _RoundedShapePosition:
+    def __init__(self, shape, ndigits=6):
+        self._shape = shape
+        self._ndigits = ndigits
+
+    def get_position(self):
+        return [round(float(c), self._ndigits) for c in self._shape.get_position()]
+
+
+def cross_boundary_rounded(next_position, target, area, ndigits=6):
+    next_position = [round(p, ndigits) for p in next_position]
+    return cross_boundary(
+        next_position, _RoundedShapePosition(target, ndigits), area)
+
 def get_unoverlapped_frame_dx_dy(n, x_range, y_range):
     min_dist_sq = 0.1  # 平方距离比较，避免开方
     frame_dx_dy = np.empty((n, 2))
@@ -153,12 +167,12 @@ class PutRubbishInMovingBin(Task):
         self.area = [0.15, -0.5, 0.85, 0.4, 0.5, 0.85]
         target_size_xy = [0.2, 0.2]
         self.area = [
-            self.area[0]+target_size_xy[0]/2,
-            self.area[1]+target_size_xy[1]/2,
-            self.area[2],
-            self.area[3]-target_size_xy[0]/2,
-            self.area[4]-target_size_xy[1]/2,
-            self.area[5],
+            round(self.area[0]+target_size_xy[0]/2, 6),
+            round(self.area[1]+target_size_xy[1]/2, 6),
+            round(self.area[2], 6),
+            round(self.area[3]-target_size_xy[0]/2, 6),
+            round(self.area[4]-target_size_xy[1]/2, 6),
+            round(self.area[5], 6),
         ]
         self.t_max = 1 # (s)
         self.step_id = 0
@@ -251,7 +265,9 @@ class PutRubbishInMovingBin(Task):
             a0=target_state_dict["a"],
             dt=simulation_timestep,            bool_return_velocity=True,
         )
-        bool_cross, boundary_index = cross_boundary(target_position, self.bin, self.area)
+        target_position = [round(p, 6) for p in target_position]
+        bool_cross, boundary_index = cross_boundary_rounded(
+            target_position, self.bin, self.area)
         if not bool_cross:
             self.bin.set_position(target_position)
         else:

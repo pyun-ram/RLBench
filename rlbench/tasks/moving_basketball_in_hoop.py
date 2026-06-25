@@ -228,12 +228,16 @@ class MovingBasketballInHoop(Task):
             self.var2target_state_list[var_index] = []
             bool_a = get_state_config(var_index)
             # ball target state
+            if np.random.random() < 0.5:
+                a_range = [-0.02, -0.02, 0, -0.01, -0.01, 0]
+            else:
+                a_range = [0.01, 0.01, 0, 0.02, 0.02, 0]
             x, v, a = init_target_state(
                 t_max=self.t_max,
                 area=self.ball_area,
                 x_range=self.ball_area,
                 v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
-                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                a_range=a_range,
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
@@ -241,7 +245,7 @@ class MovingBasketballInHoop(Task):
                 dv=[0.025, 0.025, 0.025],
                 da=[0.001, 0.001, 0.001],
                 min_velo_norm=0.03,
-                min_acc_norm=0.01 if bool_a else 0,
+                min_acc_norm=0.02 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({
                 "x": x,
@@ -249,12 +253,16 @@ class MovingBasketballInHoop(Task):
                 "a": a,
             })
             # hoop target state
+            if np.random.random() < 0.5:
+                a_range = [-0.02, -0.02, 0, -0.01, -0.01, 0]
+            else:
+                a_range = [0.01, 0.01, 0, 0.02, 0.02, 0]
             x, v, a = init_target_state(
                 t_max=self.t_max,
                 area=self.hoop_area,
                 x_range=self.hoop_area,
                 v_range=[-0.2, -0.2, 0, 0.2, 0.2, 0],
-                a_range=[-0.01, -0.01, 0, 0.01, 0.01, 0],
+                a_range=a_range,
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
@@ -262,7 +270,7 @@ class MovingBasketballInHoop(Task):
                 dv=[0.025, 0.025, 0.025],
                 da=[0.001, 0.001, 0.001],
                 min_velo_norm=0.03,
-                min_acc_norm=0.01 if bool_a else 0,
+                min_acc_norm=0.02 if bool_a else 0,
             )
             self.var2target_state_list[var_index].append({
                 "x": x,

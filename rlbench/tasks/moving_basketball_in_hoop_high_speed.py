@@ -228,12 +228,16 @@ class MovingBasketballInHoopHighSpeed(Task):
             self.var2target_state_list[var_index] = []
             bool_a = get_state_config(var_index)
             # ball target state
+            if np.random.random() < 0.5:
+                a_range = [-0.04, -0.04, 0, -0.02, -0.02, 0]
+            else:
+                a_range = [0.02, 0.02, 0, 0.04, 0.04, 0]
             x, v, a = init_target_state(
                 t_max=self.t_max,
                 area=self.ball_area,
                 x_range=self.ball_area,
                 v_range=[-0.4, -0.4, 0, 0.4, 0.4, 0],
-                a_range=[-0.02, -0.02, 0, 0.02, 0.02, 0],
+                a_range=a_range,
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,
@@ -249,12 +253,16 @@ class MovingBasketballInHoopHighSpeed(Task):
                 "a": a,
             })
             # hoop target state
+            if np.random.random() < 0.5:
+                a_range = [-0.04, -0.04, 0, -0.02, -0.02, 0]
+            else:
+                a_range = [0.02, 0.02, 0, 0.04, 0.04, 0]
             x, v, a = init_target_state(
                 t_max=self.t_max,
                 area=self.hoop_area,
                 x_range=self.hoop_area,
                 v_range=[-0.4, -0.4, 0, 0.4, 0.4, 0],
-                a_range=[-0.02, -0.02, 0, 0.02, 0.02, 0],
+                a_range=a_range,
                 x0=None,
                 v0=None,
                 a0=[0, 0, 0] if not bool_a else None,

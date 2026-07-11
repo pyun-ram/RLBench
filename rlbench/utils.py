@@ -123,7 +123,7 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
         front_depth_f = join(example_path, FRONT_DEPTH_FOLDER)
         front_mask_f = join(example_path, FRONT_MASK_FOLDER)
 
-        num_steps = len(obs)
+        num_steps = len(obs) - 1
 
         # if not (num_steps == len(listdir(l_sh_rgb_f)) == len(
         #         listdir(l_sh_depth_f)) == len(listdir(r_sh_rgb_f)) == len(

@@ -9,6 +9,7 @@ from rlbench.action_modes.gripper_action_modes import Discrete
 from rlbench.backend.utils import task_file_to_task_class
 from rlbench.environment import Environment
 import rlbench.backend.task as task
+from pyrep.objects.object import Object
 
 import os
 import pickle
@@ -27,7 +28,7 @@ flags.DEFINE_string('save_path',
                     'Where to save the demos.')
 flags.DEFINE_list('tasks', [],
                   'The tasks to collect. If empty, all tasks are collected.')
-flags.DEFINE_list('image_size', [128, 128],
+flags.DEFINE_list('image_size', [256, 256],
                   'The size of the images tp save.')
 flags.DEFINE_enum('renderer',  'opengl3', ['opengl', 'opengl3'],
                   'The renderer to use. opengl does not include shadows, '
@@ -45,7 +46,29 @@ def check_and_make(dir):
         os.makedirs(dir)
 
 
-def save_demo(demo, example_path):
+CAMERA_NAMES = (
+    'front',
+    'left_shoulder',
+    'right_shoulder',
+    'overhead',
+    'wrist',
+)
+
+
+def _save_camera_poses(obs, camera_poses_path, frame_id):
+    camera_poses = {}
+    for camera_name in CAMERA_NAMES:
+        camera_poses[camera_name] = {
+            'extrinsics': obs.misc[f'{camera_name}_camera_extrinsics'],
+            'intrinsics': obs.misc[f'{camera_name}_camera_intrinsics'],
+            'near': obs.misc[f'{camera_name}_camera_near'],
+            'far': obs.misc[f'{camera_name}_camera_far'],
+        }
+    with open(os.path.join(camera_poses_path, '%d.pkl' % frame_id), 'wb') as f:
+        pickle.dump(camera_poses, f)
+
+
+def save_demo(demo, example_path, object_poses):
 
     # Save image data first, and then None the image data, and pickle
     left_shoulder_rgb_path = os.path.join(
@@ -72,6 +95,7 @@ def save_demo(demo, example_path):
     front_rgb_path = os.path.join(example_path, FRONT_RGB_FOLDER)
     front_depth_path = os.path.join(example_path, FRONT_DEPTH_FOLDER)
     front_mask_path = os.path.join(example_path, FRONT_MASK_FOLDER)
+    camera_poses_path = os.path.join(example_path, 'camera_poses')
 
     check_and_make(left_shoulder_rgb_path)
     check_and_make(left_shoulder_depth_path)
@@ -88,6 +112,17 @@ def save_demo(demo, example_path):
     check_and_make(front_rgb_path)
     check_and_make(front_depth_path)
     check_and_make(front_mask_path)
+    check_and_make(camera_poses_path)
+
+    if len(object_poses) == len(demo) - 1:
+        # Some live-demo executions omit the reset observation callback.
+        # Task objects are static before waypoint motion starts, so duplicate
+        # the first captured object state for that initial demo frame.
+        object_poses.insert(0, object_poses[0])
+    elif len(demo) != len(object_poses):
+        raise ValueError(
+            'Object pose frames (%d) do not match demo frames (%d).' %
+            (len(object_poses), len(demo)))
 
     for i, obs in enumerate(demo):
         left_shoulder_rgb = Image.fromarray(obs.left_shoulder_rgb)
@@ -138,6 +173,7 @@ def save_demo(demo, example_path):
         front_rgb.save(os.path.join(front_rgb_path, IMAGE_FORMAT % i))
         front_depth.save(os.path.join(front_depth_path, IMAGE_FORMAT % i))
         front_mask.save(os.path.join(front_mask_path, IMAGE_FORMAT % i))
+        _save_camera_poses(obs, camera_poses_path, i)
 
         # We save the images separately, so set these to None for pickling.
         obs.left_shoulder_rgb = None
@@ -165,6 +201,22 @@ def save_demo(demo, example_path):
     with open(os.path.join(example_path, LOW_DIM_PICKLE), 'wb') as f:
         pickle.dump(demo, f)
 
+    with open(os.path.join(example_path, 'object_poses.pkl'), 'wb') as f:
+        pickle.dump(object_poses, f)
+
+
+def capture_task_object_poses(task_env):
+    object_poses = {}
+    # Grasped task objects are reparented from the task TTM to the gripper,
+    # so capture the full scene tree rather than only the task subtree.
+    for obj in task_env._scene.pyrep.get_objects_in_tree():
+        object_name = obj.get_name()
+        object_poses[object_name] = {
+            'pose': obj.get_pose(),
+            'type': Object.get_object_type(object_name).name,
+        }
+    return object_poses
+
 
 def run(i, lock, task_index, variation_count, results, file_lock, tasks):
     """Each thread will choose one task and variation, and then gather
@@ -177,26 +229,25 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
     img_size = list(map(int, FLAGS.image_size))
 
     obs_config = ObservationConfig()
-    obs_config.set_all(True)
+    obs_config.set_all(False)
+    obs_config.joint_positions = True
+    obs_config.joint_velocities = True
+    obs_config.gripper_pose = True
+    obs_config.gripper_open = True
+    obs_config.gripper_joint_positions = True
     obs_config.right_shoulder_camera.image_size = img_size
     obs_config.left_shoulder_camera.image_size = img_size
     obs_config.overhead_camera.image_size = img_size
     obs_config.wrist_camera.image_size = img_size
     obs_config.front_camera.image_size = img_size
 
-    # Store depth as 0 - 1
-    obs_config.right_shoulder_camera.depth_in_meters = False
-    obs_config.left_shoulder_camera.depth_in_meters = False
-    obs_config.overhead_camera.depth_in_meters = False
-    obs_config.wrist_camera.depth_in_meters = False
-    obs_config.front_camera.depth_in_meters = False
-
-    # We want to save the masks as rgb encodings.
-    obs_config.left_shoulder_camera.masks_as_one_channel = False
-    obs_config.right_shoulder_camera.masks_as_one_channel = False
-    obs_config.overhead_camera.masks_as_one_channel = False
-    obs_config.wrist_camera.masks_as_one_channel = False
-    obs_config.front_camera.masks_as_one_channel = False
+    for camera_name in CAMERA_NAMES:
+        camera_config = getattr(obs_config, '%s_camera' % camera_name)
+        camera_config.set_all(True)
+        # Match log_demo: encode normalized [0, 1] depth with DEPTH_SCALE.
+        # The saved near/far values are used to recover metric depth later.
+        camera_config.depth_in_meters = False
+        camera_config.masks_as_one_channel = False
 
     if FLAGS.renderer == 'opengl':
         obs_config.right_shoulder_camera.render_mode = RenderMode.OPENGL
@@ -264,11 +315,13 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
                   '// Variation:', my_variation_count, '// Demo:', ex_idx)
             attempts = 10
             while attempts > 0:
+                object_poses = []
                 try:
-                    # TODO: for now we do the explicit looping.
                     demo, = task_env.get_demos(
                         amount=1,
-                        live_demos=True)
+                        live_demos=True,
+                        callable_each_step=lambda _: object_poses.append(
+                            capture_task_object_poses(task_env)))
                 except Exception as e:
                     attempts -= 1
                     if attempts > 0:
@@ -285,7 +338,7 @@ def run(i, lock, task_index, variation_count, results, file_lock, tasks):
                     break
                 episode_path = os.path.join(episodes_path, EPISODE_FOLDER % ex_idx)
                 with file_lock:
-                    save_demo(demo, episode_path)
+                    save_demo(demo, episode_path, object_poses)
                 break
             if abort_variation:
                 break
